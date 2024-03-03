@@ -7,7 +7,7 @@ from pymongo.errors import PyMongoError
 import bcrypt
 import base64
 
-"""change participant"""
+"""change participant  """
 class MongoDB:
     """
     A MongoDB database wrapper.
