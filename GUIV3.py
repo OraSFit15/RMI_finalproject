@@ -228,11 +228,17 @@ class FramelessWindow(QMainWindow):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.central_widget.setLayout(self.layout)
         self.setCentralWidget(self.central_widget)
-
         self.title_separator = QFrame(self.central_widget)
         self.title_separator.setGeometry(0, 30, self.width(), 2)
-        self.title_separator.setStyleSheet("background-color: cyan;")
+        self.title_separator.setStyleSheet("background-color: orange;")
 
+        self.setFixedSize(500, 300)
+    """def paintEvent(self, event):
+        
+        painter = QPainter(self)
+        pen = QPen(QColor("#cc692f"), 30, Qt.SolidLine)
+        painter.setPen(pen)
+        painter.drawRect(self.rect())"""
     def mousePressEvent(self, event):
         """Event handler for mouse press events."""
         self.mousePress = event.pos()
@@ -270,7 +276,7 @@ class CustomDialog(QDialog):
         self.title_separator = QFrame(self)
         self.title_separator.setFrameShape(QFrame.HLine)
         self.title_separator.setFrameShadow(QFrame.Sunken)
-        self.title_separator.setStyleSheet("background-color: cyan;")
+        self.title_separator.setStyleSheet("background-color: orange;")
         self.main_layout.addWidget(self.title_separator)
 
     def mousePressEvent(self, event):
@@ -372,48 +378,53 @@ class Login(FramelessWindow):
         self.setWindowIcon(QIcon("icon.png"))
         self.setWindowTitle("Login")
 
+
+
     def init_geometry(self):
         """Sets up the initial geometry of the Login window."""
         self.top = 100
         self.left = 100
         self.width = 500
-        self.height = 200
+        self.height = 220
         self.setGeometry(self.top, self.left, self.width, self.height)
+        self.setStyleSheet("QWidget { border-radius: 20px;background-color: #fbe5d6;  }")
+
 
     def init_login_button(self):
         """Initializes the Login button."""
         self.login = QPushButton(self.central_widget)
-        self.login.setText("Login")
+        self.login.setText("LOGIN")
         self.login.setGeometry(215, 150, 80, 20)
         self.login.setFont(QFont('Roboto', 12))
-        self.login.setStyleSheet("font-size: 10px;")
+        self.login.setStyleSheet(
+            " border-radius : 5px; font-size: 10px; background-color:  #f8cba8; color: black;"
+            "QPushButton { border-radius: 30px; }")
         self.login.clicked.connect(self.login_clicked)
 
     def init_username(self):
         """Initializes the Username label and input field."""
         self.username = QLabel(self.central_widget)
-        self.username.setText("Username:")
-        self.username.move(100, 95)
+        self.username.setText("USERNAME:")
+        self.username.move(95, 95)
         self.username.setFont(QFont('Roboto', 12))
         self.username.setStyleSheet("font-size: 15px;")
-
         self.username_input = QLineEdit(self.central_widget)
         self.username_input.setGeometry(180, 100, 200, 20)
-        self.username_input.setFont(QFont('Roboto', 12))
-        self.username_input.setStyleSheet("font-size: 10px;")
+        self.username_input.setFont(QFont('Roboto', 15))
+        self.username_input.setStyleSheet("font-size: 15px;background-color:white;")
 
     def init_password(self):
         """Initializes the Password label and input field."""
         self.password = QLabel(self.central_widget)
-        self.password.setText("Password:")
-        self.password.move(100, 120)
+        self.password.setText("PASSWORD:")
+        self.password.move(95, 120)
         self.password.setFont(QFont('Roboto', 12))
         self.password.setStyleSheet("font-size: 15px;")
 
         self.password_input = QLineEdit(self.central_widget)
         self.password_input.setGeometry(180, 125, 200, 20)
-        self.password_input.setFont(QFont('Roboto', 12))
-        self.password_input.setStyleSheet("font-size: 10px;")
+        self.password_input.setFont(QFont('Roboto', 15))
+        self.password_input.setStyleSheet("font-size: 15px;background-color:white;")
         self.password_input.setEchoMode(QLineEdit.Password)
 
     def init_appname(self):
@@ -429,23 +440,136 @@ class Login(FramelessWindow):
         """Initializes the horizontal lines below the labels and input fields."""
         self.appline = QFrame(self.central_widget)
         self.appline.setGeometry(100, 80, 300, 2)
-        self.appline.setStyleSheet("background-color: cyan;")
+        self.appline.setStyleSheet("background-color: #f8cbad;")
 
         self.appline2 = QFrame(self.central_widget)
         self.appline2.setGeometry(100, 180, 300, 2)
-        self.appline2.setStyleSheet("background-color: cyan;")
+        self.appline2.setStyleSheet("background-color: #f8cbad;")
 
     def login_clicked(self):
         """Handles the click event of the Login button."""
         username = self.username_input.text()
         password = self.password_input.text()
+
         if self.users.check_user(username, password):
-            self.main = MainWindow()
+            self.main = MenuWindow()
             self.main.show()
-            self.hide()
+            self.close()
         else:
             QMessageBox.about(self, "Error", "Wrong username or password")
 
+
+class MenuWindow(FramelessWindow):
+    def __init__(self):
+        """Initializes the Login class."""
+        super().__init__(title="Mock MRI Scanner")
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.label = QLabel("Movement Monitor MRI",self)
+        self.label.setGeometry(50,50,300,50)
+        self.label.setFixedSize(500, 65)
+        self.label.setStyleSheet(
+            " font-size: 20px;  color: black;font-weight: bold;"
+            )
+        self.init_ui()
+        self.init_geometry()
+        self.client = database.get_client()
+        self.db = self.client["MRI_PROJECT"]
+        self.user_collection = self.db["USERS"]
+        self.users = database.Users(self.user_collection)
+        # print(f"user_collection: {self.user_collection}, users: {self.users}")
+        # print(self.user_collection.find_one({"username": "admin"}))
+
+        self.container = QWidget()
+        self.container_layout = QVBoxLayout()
+        self.container.setLayout(self.container_layout)
+        self.layout.addWidget(self.container)
+
+        self.init_login_button()
+        self.init_login_button2()
+        self.init_login_button3()
+        self.init_login_button4()
+        self.show()
+
+    def init_ui(self):
+        """Initializes the user interface of the Login window."""
+        self.setWindowIcon(QIcon("icon.png"))
+        self.setWindowTitle("Login")
+
+
+    def init_geometry(self):
+        """Sets up the initial geometry of the Login window."""
+
+
+        self.top = 100
+        self.left = 100
+        self.width = 500
+        self.height = 300
+        self.setGeometry(self.top, self.left, self.width, self.height)
+        self.setStyleSheet("QWidget { border-radius: 20px;background-color: #fbe5d6; }")
+
+
+    def init_login_button(self):
+        """Initializes the Login button."""
+        self.login = QPushButton(self.central_widget)
+        self.login.setFixedSize(150, 65)
+        self.login.setText("NEW PARTICIPANT")
+        self.login.setGeometry(50, 120, 80, 20)
+        self.login.setFont(QFont('Roboto', 12))
+        self.login.setStyleSheet(
+            " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
+            " background-color:  #f8cba8; color: black;font-weight: bold;"
+        )
+        self.login.clicked.connect(self.login_clicked)
+
+    def init_login_button2(self):
+        """Initializes the Login button."""
+        self.login = QPushButton(self.central_widget)
+        self.login.setFixedSize(150, 65)
+        self.login.setText("EXISTING PARTICIPANT")
+        self.login.setGeometry(300, 120, 100, 20)
+        self.login.setFont(QFont('Roboto', 12))
+        self.login.setStyleSheet(
+            " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
+            " background-color:  #f8cba8; color: black;font-weight: bold;"
+        )
+        self.login.clicked.connect(self.login_clicked)
+
+    def init_login_button3(self):
+        """Initializes the Login button."""
+        self.login = QPushButton(self.central_widget)
+        self.login.setFixedSize(150, 65)
+        self.login.setText("STATISTICS")
+        self.login.setGeometry(50, 200, 80, 20)
+        self.login.setFont(QFont('Roboto', 12))
+        self.login.setStyleSheet(
+            " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
+            " background-color:  #f8cba8; color: black;font-weight: bold;"
+        )
+        self.login.clicked.connect(self.login_clicked)
+
+    def init_login_button4(self):
+        """Initializes the Login button."""
+        self.login = QPushButton(self.central_widget)
+        self.login.setFixedSize(150, 65)
+        self.login.setText("SETTINGS")
+        self.login.setGeometry(300, 200, 80, 20)
+        self.login.setFont(QFont('Roboto', 12))
+        self.login.setStyleSheet(
+            " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
+            " background-color:  #f8cba8; color: black;font-weight: bold;"
+        )
+        self.login.clicked.connect(self.login_clicked)
+    def login_clicked(self):
+        """Handles the click event of the Login button."""
+        username = self.username_input.text()
+        password = self.password_input.text()
+
+        if self.users.check_user(username, password):
+            self.main = MenuWindow()
+            self.main.show()
+            self.close()
+        else:
+            QMessageBox.about(self, "Error", "Wrong username or password")
 
 class SoundLoader(QThread):
     """A thread to load sound files in the background."""
@@ -1122,6 +1246,6 @@ class MainWindow(FramelessWindow):
 
 if __name__ == '__main__':
     App = QApplication(sys.argv)
-    qt_material.apply_stylesheet(App, theme='dark_cyan.xml')
-    window = Login()
+    qt_material.apply_stylesheet(App, theme='dark_orange.xml')
+    window = MenuWindow()
     sys.exit(App.exec_())
