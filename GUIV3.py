@@ -1,5 +1,6 @@
 import sys
-from datetime import datetime
+import datetime
+
 import PyQt5
 import database
 import pyaudio
@@ -399,6 +400,8 @@ class Login(FramelessWindow):
         self.login.setStyleSheet(
             " border-radius : 5px; font-size: 10px; background-color:  #f8cba8; color: black;"
             "QPushButton { border-radius: 30px; }")
+        self.login.setCursor(Qt.PointingHandCursor)
+
         self.login.clicked.connect(self.login_clicked)
 
     def init_username(self):
@@ -463,9 +466,13 @@ class MenuWindow(FramelessWindow):
     def __init__(self):
         """Initializes the Login class."""
         super().__init__(title="Mock MRI Scanner")
+        self.stat = None
+        self.set = None
+        self.exs = None
+        self.new = None
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.label = QLabel("Movement Monitor MRI",self)
-        self.label.setGeometry(50,50,300,50)
+        self.label.setGeometry(135,50,100,50)
         self.label.setFixedSize(500, 65)
         self.label.setStyleSheet(
             " font-size: 20px;  color: black;font-weight: bold;"
@@ -484,10 +491,12 @@ class MenuWindow(FramelessWindow):
         self.container.setLayout(self.container_layout)
         self.layout.addWidget(self.container)
 
-        self.init_login_button()
-        self.init_login_button2()
-        self.init_login_button3()
-        self.init_login_button4()
+        self.init_new_button()
+        self.init_exs_button()
+        self.init_stat_button()
+        self.init_set_button()
+        self.new_participant_dialog = NewParticipantDialog()
+
         self.show()
 
     def init_ui(self):
@@ -498,8 +507,6 @@ class MenuWindow(FramelessWindow):
 
     def init_geometry(self):
         """Sets up the initial geometry of the Login window."""
-
-
         self.top = 100
         self.left = 100
         self.width = 500
@@ -507,69 +514,68 @@ class MenuWindow(FramelessWindow):
         self.setGeometry(self.top, self.left, self.width, self.height)
         self.setStyleSheet("QWidget { border-radius: 20px;background-color: #fbe5d6; }")
 
+    def show_new_participant_dialog(self):
+        self.new_participant_dialog.show()
 
-    def init_login_button(self):
+    def init_new_button(self):
         """Initializes the Login button."""
-        self.login = QPushButton(self.central_widget)
-        self.login.setFixedSize(150, 65)
-        self.login.setText("NEW PARTICIPANT")
-        self.login.setGeometry(50, 120, 80, 20)
-        self.login.setFont(QFont('Roboto', 12))
-        self.login.setStyleSheet(
+        self.new = QPushButton(self.central_widget)
+        self.new.setFixedSize(150, 65)
+        self.new.setText("NEW PARTICIPANT")
+        self.new.setGeometry(50, 120, 80, 20)
+        self.new.setFont(QFont('Roboto', 12))
+        self.new.setStyleSheet(
             " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
             " background-color:  #f8cba8; color: black;font-weight: bold;"
         )
-        self.login.clicked.connect(self.login_clicked)
+        self.new.setCursor(Qt.PointingHandCursor)
 
-    def init_login_button2(self):
+        self.new.clicked.connect(self.show_new_participant_dialog)
+
+    def init_exs_button(self):
         """Initializes the Login button."""
-        self.login = QPushButton(self.central_widget)
-        self.login.setFixedSize(150, 65)
-        self.login.setText("EXISTING PARTICIPANT")
-        self.login.setGeometry(300, 120, 100, 20)
-        self.login.setFont(QFont('Roboto', 12))
-        self.login.setStyleSheet(
+        self.exs = QPushButton(self.central_widget)
+        self.exs.setFixedSize(150, 65)
+        self.exs.setText("EXISTING PARTICIPANT")
+        self.exs.setGeometry(300, 120, 100, 20)
+        self.exs.setFont(QFont('Roboto', 12))
+        self.exs.setStyleSheet(
             " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
             " background-color:  #f8cba8; color: black;font-weight: bold;"
         )
-        self.login.clicked.connect(self.login_clicked)
+        self.new.setCursor(Qt.PointingHandCursor)
 
-    def init_login_button3(self):
+        #self.exs.clicked.connect(self.login_clicked)
+
+    def init_stat_button(self):
         """Initializes the Login button."""
-        self.login = QPushButton(self.central_widget)
-        self.login.setFixedSize(150, 65)
-        self.login.setText("STATISTICS")
-        self.login.setGeometry(50, 200, 80, 20)
-        self.login.setFont(QFont('Roboto', 12))
-        self.login.setStyleSheet(
+        self.stat = QPushButton(self.central_widget)
+        self.stat.setFixedSize(150, 65)
+        self.stat.setText("STATISTICS")
+        self.stat.setGeometry(50, 200, 80, 20)
+        self.stat.setFont(QFont('Roboto', 12))
+        self.stat.setStyleSheet(
             " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
             " background-color:  #f8cba8; color: black;font-weight: bold;"
         )
-        self.login.clicked.connect(self.login_clicked)
+        self.stat.setCursor(Qt.PointingHandCursor)
 
-    def init_login_button4(self):
+        #self.stat.clicked.connect(self.login_clicked)
+
+    def init_set_button(self):
         """Initializes the Login button."""
-        self.login = QPushButton(self.central_widget)
-        self.login.setFixedSize(150, 65)
-        self.login.setText("SETTINGS")
-        self.login.setGeometry(300, 200, 80, 20)
-        self.login.setFont(QFont('Roboto', 12))
-        self.login.setStyleSheet(
+        self.set = QPushButton(self.central_widget)
+        self.set.setFixedSize(150, 65)
+        self.set.setText("SETTINGS")
+        self.set.setGeometry(300, 200, 80, 20)
+        self.set.setFont(QFont('Roboto', 12))
+        self.set.setStyleSheet(
             " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
             " background-color:  #f8cba8; color: black;font-weight: bold;"
         )
-        self.login.clicked.connect(self.login_clicked)
-    def login_clicked(self):
-        """Handles the click event of the Login button."""
-        username = self.username_input.text()
-        password = self.password_input.text()
+        self.set.setCursor(Qt.PointingHandCursor)
+        #self.login.clicked.connect(self.login_clicked)
 
-        if self.users.check_user(username, password):
-            self.main = MenuWindow()
-            self.main.show()
-            self.close()
-        else:
-            QMessageBox.about(self, "Error", "Wrong username or password")
 
 class SoundLoader(QThread):
     """A thread to load sound files in the background."""
@@ -656,7 +662,7 @@ class MicrophoneRecorder:
         self.p.terminate()
 
 
-class participantDetailsWindow(FramelessWindow):
+class ParticipantDetailsWindow(FramelessWindow):
     """A window for handling participant details."""
 
     participant_id_received = pyqtSignal(str)
@@ -676,13 +682,13 @@ class participantDetailsWindow(FramelessWindow):
 
     def new_participant(self):
         """Opens the dialog for adding a new participant."""
-        self.new_participant_dialog = NewparticipantDialog()
+        self.new_participant_dialog = NewParticipantDialog()
         self.new_participant_dialog.participant_id_generated.connect(self.handle_participant_id)
         self.new_participant_dialog.show()
 
     def existing_participant(self):
         """Opens the dialog for selecting an existing participant."""
-        self.existing_participant_dialog = ExistingparticipantDialog()
+        self.existing_participant_dialog = ExistingParticipantDialog()
         self.existing_participant_dialog.participant_id_generated.connect(self.handle_participant_id)
         self.existing_participant_dialog.show()
 
@@ -694,60 +700,77 @@ class participantDetailsWindow(FramelessWindow):
         """
         self.participant_id_received.emit(participant_id)
 
-
-class NewparticipantDialog(CustomDialog):
-    """A dialog for adding a new participant."""
-
+class NewParticipantDialog(CustomDialog):
     participant_id_generated = pyqtSignal(str)
 
     def __init__(self, parent=None, title="New participant"):
-        """Initializes the NewparticipantDialog class.
-
-        Args:
-            parent (QWidget): The parent widget.
-            title (str): The title of the dialog.
-        """
         super().__init__(parent, title)
 
-        self.client = database.get_client()
-        self.db = self.client['MRI_PROJECT']
-        self.participants_collection = self.db['participants']
-
-        form_layout = QFormLayout()
         self.first_name_field = QLineEdit()
         self.last_name_field = QLineEdit()
-        self.age_field = QSpinBox()
-        self.age_field.setRange(0, 120)
         self.sex_field = QComboBox()
         self.sex_field.addItems(['Male', 'Female', 'Other'])
 
-        form_layout.addRow(QLabel('First Name:'), self.first_name_field)
-        form_layout.addRow(QLabel('Last Name:'), self.last_name_field)
-        form_layout.addRow(QLabel('Age:'), self.age_field)
-        form_layout.addRow(QLabel('Sex:'), self.sex_field)
+        self.calendar = QCalendarWidget()
+        self.calendar.setGridVisible(True)
 
-        self.main_layout.addLayout(form_layout)
+        self.calendar.clicked[QDate].connect(self.show_selected_date)
+        self.age_label = QLabel()
+        self.selected_date_label = QLabel()
+
+        layout = self.layout()
+
+        layout.addWidget(QLabel("First Name:"))
+        layout.addWidget(self.first_name_field)
+        layout.addWidget(QLabel("Last Name:"))
+        layout.addWidget(self.last_name_field)
+        layout.addWidget(QLabel("Sex:"))
+        layout.addWidget(self.sex_field)
+        layout.addWidget(QLabel("Date of Birth:"))
+        layout.addWidget(self.calendar)
+        layout.addWidget(self.selected_date_label)
+        layout.addWidget(QLabel("Age:"))
+        layout.addWidget(self.age_label)
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.submit)
         self.main_layout.addWidget(self.submit_button)
+    def show_selected_date(self, date):
+        selected_date = datetime.datetime(date.year(), date.month(), date.day())
+        current_date = datetime.datetime.now()
+        self.selected_date_label.setText(f"Selected Date: {date.toString('dd.MM.yyyy')}")
 
     def submit(self):
-        """Submits the new participant data and emits the generated participant ID signal."""
+        # Vérifier si les champs requis sont vides
+        if self.first_name_field.text() == '' or self.last_name_field.text() == '':
+            QMessageBox.warning(self, "Warning", "Please fill in all required fields.")
+            return
+
+        selected_date = self.calendar.selectedDate()
+        selected_date = datetime.datetime(selected_date.year(), selected_date.month(), selected_date.day())
+        current_date = datetime.datetime.now()
+        age = current_date.year - selected_date.year - (
+                (current_date.month, current_date.day) < (selected_date.month, selected_date.day))
+
+        if age < 0:
+            QMessageBox.warning(self, "Warning", "Invalid date of birth.")
+            return
+
         success = database.insert_participant(
             self.first_name_field.text(),
             self.last_name_field.text(),
-            self.age_field.value(),
+            age,
             self.sex_field.currentText()
         )
+
         if success:
             self.participant_id_generated.emit(str(success))
             self.close()
         else:
-            QMessageBox.critical(self, "Error", "Database error occurred.")
+            QMessageBox.critical(self, "Error", "DB ERROR")
 
 
-class ExistingparticipantDialog(CustomDialog):
+class ExistingParticipantDialog(CustomDialog):
     """A dialog for selecting an existing participant."""
 
     participant_id_generated = pyqtSignal(str)
@@ -1143,7 +1166,7 @@ class MainWindow(FramelessWindow):
 
     def show_participant_details(self):
         """Displays the participant details window."""
-        self.participant_details_window = participantDetailsWindow()
+        self.participant_details_window = ParticipantDetailsWindow()
         self.participant_details_window.participant_id_received.connect(self.handle_participant_id)
         self.participant_details_window.show()
 
