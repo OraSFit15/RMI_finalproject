@@ -702,7 +702,7 @@ class ParticipantDetailsWindow(FramelessWindow):
 
 class NewParticipantDialog(CustomDialog):
     participant_id_generated = pyqtSignal(str)
-
+'changes the participant form'
     def __init__(self, parent=None, title="New participant"):
         super().__init__(parent, title)
 
