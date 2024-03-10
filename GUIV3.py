@@ -703,6 +703,7 @@ class ParticipantDetailsWindow(FramelessWindow):
 
 
 class NewParticipantDialog(QDialog):
+    """modification here """
     participant_id_generated = pyqtSignal(str)
 
     def __init__(self, parent=None, title="NEW PARTICIPANT FORM"):
