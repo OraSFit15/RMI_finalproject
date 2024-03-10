@@ -270,6 +270,7 @@ class CustomDialog(QDialog):
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.title_bar = TitleBar(self, title)
+        self.setGeometry(300, 300, 300, 300)
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.addWidget(self.title_bar)
@@ -700,46 +701,114 @@ class ParticipantDetailsWindow(FramelessWindow):
         """
         self.participant_id_received.emit(participant_id)
 
-class NewParticipantDialog(CustomDialog):
-    participant_id_generated = pyqtSignal(str)
-'changes the participant form'
-    def __init__(self, parent=None, title="New participant"):
-        super().__init__(parent, title)
 
+class NewParticipantDialog(QDialog):
+    participant_id_generated = pyqtSignal(str)
+
+    def __init__(self, parent=None, title="NEW PARTICIPANT FORM"):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.title_bar = TitleBar(self, title)
+
+        label_email = QLabel("Email:")
+        self.email_field = QLineEdit()
+        label_level_anxiety = QLabel("Level of Anxiety:")
+        self.level_anxiety_field = QLineEdit()
+        contact_number = QLabel("Contact Number")
+        self.contact_number = QLineEdit()
+        self.submit_button_side = QPushButton("ADDITIONAL INFORMATION")
+
+        # Widgets côté droit
         self.first_name_field = QLineEdit()
         self.last_name_field = QLineEdit()
+        id_number = QLabel("Id Number:")
+        self.id_number = QLineEdit()
         self.sex_field = QComboBox()
         self.sex_field.addItems(['Male', 'Female', 'Other'])
-
-        self.calendar = QCalendarWidget()
-        self.calendar.setGridVisible(True)
-
-        self.calendar.clicked[QDate].connect(self.show_selected_date)
+        self.date_edit = QDateEdit()
+        self.date_edit.setCalendarPopup(True)
         self.age_label = QLabel()
         self.selected_date_label = QLabel()
-
-        layout = self.layout()
-
-        layout.addWidget(QLabel("First Name:"))
-        layout.addWidget(self.first_name_field)
-        layout.addWidget(QLabel("Last Name:"))
-        layout.addWidget(self.last_name_field)
-        layout.addWidget(QLabel("Sex:"))
-        layout.addWidget(self.sex_field)
-        layout.addWidget(QLabel("Date of Birth:"))
-        layout.addWidget(self.calendar)
-        layout.addWidget(self.selected_date_label)
-        layout.addWidget(QLabel("Age:"))
-        layout.addWidget(self.age_label)
-
-        self.submit_button = QPushButton("Submit")
+        self.submit_button = QPushButton("SAVE")
         self.submit_button.clicked.connect(self.submit)
-        self.main_layout.addWidget(self.submit_button)
-    def show_selected_date(self, date):
-        selected_date = datetime.datetime(date.year(), date.month(), date.day())
-        current_date = datetime.datetime.now()
-        self.selected_date_label.setText(f"Selected Date: {date.toString('dd.MM.yyyy')}")
 
+        # Layouts
+        main_layout = QVBoxLayout(self)
+        main_layout.addWidget(self.title_bar)
+
+        self.title_separator = QFrame(self)
+        self.title_separator.setFrameShape(QFrame.HLine)
+        self.title_separator.setFrameShadow(QFrame.Sunken)
+        self.title_separator.setStyleSheet("background-color: orange;")
+        main_layout.addWidget(self.title_separator)
+
+        # Layout pour les colonnes
+        columns_layout = QHBoxLayout()
+
+        # Layout pour la colonne de gauche
+        right_layout = QVBoxLayout()
+        right_layout.addWidget(label_email)
+        right_layout.addWidget(self.email_field)
+        right_layout.addWidget(label_level_anxiety)
+        right_layout.addWidget(self.level_anxiety_field)
+        right_layout.addWidget(contact_number)
+        right_layout.addWidget(self.contact_number)
+        right_layout.addWidget(self.submit_button_side)
+        right_layout.addWidget(self.submit_button)
+        right_layout.addStretch()  # Pour étirer les widgets jusqu'en bas
+
+        # Layout pour la colonne de droite
+        left_layout = QVBoxLayout()
+        left_layout.addWidget(QLabel("First Name:"))
+        left_layout.addWidget(self.first_name_field)
+        left_layout.addWidget(QLabel("Last Name:"))
+        left_layout.addWidget(self.last_name_field)
+        left_layout.addWidget(QLabel("Gender:"))
+        left_layout.addWidget(self.sex_field)
+        left_layout.addWidget(QLabel("ID Number:"))
+        left_layout.addWidget(self.id_number)
+        left_layout.addWidget(QLabel("Date of Birth:"))
+        left_layout.addWidget(self.date_edit)
+        left_layout.addWidget(self.selected_date_label)
+
+        # Ajout des colonnes à la disposition principale
+        columns_layout.addLayout(left_layout)
+        columns_layout.addLayout(right_layout)
+
+        # Ajout de la colonne à la disposition principale
+        main_layout.addLayout(columns_layout)
+
+        # Connexion du signal dateChanged
+        self.date_edit.dateChanged.connect(self.show_selected_date)
+
+        # Styles
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f8cbad;
+            }
+            QLabel {
+                color: black;
+                font-weight: bold;
+                background-color: #f8cbad;
+            }
+            QLineEdit, QComboBox, QDateEdit {
+                background-color: #fbe5d6;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 3px;
+            }
+            QPushButton {
+                background-color: #f4b283;
+                color: black;
+                font-weight: bold;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 6px;
+            }
+            QPushButton:pressed {
+                background-color: #8c3e13;
+            }
+        """)
     def submit(self):
         # Vérifier si les champs requis sont vides
         if self.first_name_field.text() == '' or self.last_name_field.text() == '':
@@ -768,6 +837,19 @@ class NewParticipantDialog(CustomDialog):
             self.close()
         else:
             QMessageBox.critical(self, "Error", "DB ERROR")
+
+    def show_selected_date(self, age):
+        self.selected_date_label.setText(age)
+    def mousePressEvent(self, event):
+        if self.date_edit.underMouse():
+            self.calendar.setGeometry(
+                self.date_edit.mapToGlobal(self.date_edit.rect().bottomLeft())
+            )
+            self.calendar.show()
+        else:
+            self.calendar.hide()
+        super().mousePressEvent(event)
+
 
 
 class ExistingParticipantDialog(CustomDialog):
