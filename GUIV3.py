@@ -352,7 +352,7 @@ class Login(FramelessWindow):
 
     def __init__(self):
         """Initializes the Login class."""
-        super().__init__(title="Mock MRI Scanner")
+        super().__init__(title="MOCK MRI SCANNER")
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.init_ui()
         self.init_geometry()
@@ -497,6 +497,7 @@ class MenuWindow(FramelessWindow):
         self.init_stat_button()
         self.init_set_button()
         self.new_participant_dialog = NewParticipantDialog()
+        self.existing_participant_dialog = ExistingParticipantDialog()
 
         self.show()
 
@@ -505,18 +506,21 @@ class MenuWindow(FramelessWindow):
         self.setWindowIcon(QIcon("icon.png"))
         self.setWindowTitle("Login")
 
-
+    def close_window(self):
+        self.close()
     def init_geometry(self):
         """Sets up the initial geometry of the Login window."""
-        self.top = 100
+        self.top = 450
         self.left = 100
-        self.width = 500
-        self.height = 300
+        self.width = 550
+        self.height = 200
         self.setGeometry(self.top, self.left, self.width, self.height)
-        self.setStyleSheet("QWidget { border-radius: 20px;background-color: #fbe5d6; }")
+        self.setStyleSheet("QWidget { border-radius: 20px;background-color: #f8cba8; }")
 
     def show_new_participant_dialog(self):
         self.new_participant_dialog.show()
+    def show_exs_participant_dialog(self):
+        self.existing_participant_dialog.show()
 
     def init_new_button(self):
         """Initializes the Login button."""
@@ -526,12 +530,13 @@ class MenuWindow(FramelessWindow):
         self.new.setGeometry(50, 120, 80, 20)
         self.new.setFont(QFont('Roboto', 12))
         self.new.setStyleSheet(
-            " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
-            " background-color:  #f8cba8; color: black;font-weight: bold;"
+            " border: 1px solid #c55b26; font-size: 12px;"
+            " background-color:  #fbe5d6; color: black;font-weight: bold;"
         )
         self.new.setCursor(Qt.PointingHandCursor)
 
         self.new.clicked.connect(self.show_new_participant_dialog)
+        self.new.clicked.connect(self.close_window)
 
     def init_exs_button(self):
         """Initializes the Login button."""
@@ -541,12 +546,12 @@ class MenuWindow(FramelessWindow):
         self.exs.setGeometry(300, 120, 100, 20)
         self.exs.setFont(QFont('Roboto', 12))
         self.exs.setStyleSheet(
-            " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
-            " background-color:  #f8cba8; color: black;font-weight: bold;"
+            "  border: 1px solid #c55b26; font-size: 12px;"
+            " background-color:  #fbe5d6; color: black;font-weight: bold;"
         )
-        self.new.setCursor(Qt.PointingHandCursor)
-
-        #self.exs.clicked.connect(self.login_clicked)
+        self.exs.setCursor(Qt.PointingHandCursor)
+        self.exs.clicked.connect(self.show_exs_participant_dialog)
+        self.exs.clicked.connect(self.close_window)
 
     def init_stat_button(self):
         """Initializes the Login button."""
@@ -556,11 +561,11 @@ class MenuWindow(FramelessWindow):
         self.stat.setGeometry(50, 200, 80, 20)
         self.stat.setFont(QFont('Roboto', 12))
         self.stat.setStyleSheet(
-            " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
-            " background-color:  #f8cba8; color: black;font-weight: bold;"
+            "  border: 1px solid #c55b26 ; font-size: 12px;"
+            " background-color:  #fbe5d6; color: black;font-weight: bold;"
         )
         self.stat.setCursor(Qt.PointingHandCursor)
-
+        self.stat.clicked.connect(self.close_window)
         #self.stat.clicked.connect(self.login_clicked)
 
     def init_set_button(self):
@@ -571,10 +576,11 @@ class MenuWindow(FramelessWindow):
         self.set.setGeometry(300, 200, 80, 20)
         self.set.setFont(QFont('Roboto', 12))
         self.set.setStyleSheet(
-            " border : 2 solid #cc692f ;border-color : orange; font-size: 12px;"
-            " background-color:  #f8cba8; color: black;font-weight: bold;"
+            "  border: 1px solid #c55b26 ; font-size: 12px;"
+            " background-color:  #fbe5d6; color: black;font-weight: bold;"
         )
         self.set.setCursor(Qt.PointingHandCursor)
+        self.set.clicked.connect(self.close_window)
         #self.login.clicked.connect(self.login_clicked)
 
 
@@ -703,27 +709,29 @@ class ParticipantDetailsWindow(FramelessWindow):
 
 
 class NewParticipantDialog(QDialog):
-    """modification here """
+    """A dialog for entering information about a new participant."""
     participant_id_generated = pyqtSignal(str)
 
     def __init__(self, parent=None, title="NEW PARTICIPANT FORM"):
         super().__init__(parent)
         self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setGeometry(450, 100, 550, 200)
+
         self.title_bar = TitleBar(self, title)
 
-        label_email = QLabel("Email:")
+        self.label_email = QLabel("Email:")
         self.email_field = QLineEdit()
-        label_level_anxiety = QLabel("Level of Anxiety:")
+        self.label_level_anxiety = QLabel("Level of Anxiety:")
         self.level_anxiety_field = QLineEdit()
-        contact_number = QLabel("Contact Number")
-        self.contact_number = QLineEdit()
+        self.contact_number_label = QLabel("Contact Number")
+        self.contact_number_field = QLineEdit()
         self.submit_button_side = QPushButton("ADDITIONAL INFORMATION")
+        self.submit_button_side.setCursor(Qt.PointingHandCursor)
 
-        # Widgets côté droit
         self.first_name_field = QLineEdit()
         self.last_name_field = QLineEdit()
-        id_number = QLabel("Id Number:")
-        self.id_number = QLineEdit()
+        self.id_number_label = QLabel("Id Number:")
+        self.id_number_field = QLineEdit()
         self.sex_field = QComboBox()
         self.sex_field.addItems(['Male', 'Female', 'Other'])
         self.date_edit = QDateEdit()
@@ -732,65 +740,61 @@ class NewParticipantDialog(QDialog):
         self.selected_date_label = QLabel()
         self.submit_button = QPushButton("SAVE")
         self.submit_button.clicked.connect(self.submit)
-
-        # Layouts
-        main_layout = QVBoxLayout(self)
-        main_layout.addWidget(self.title_bar)
+        self.submit_button.setCursor(Qt.PointingHandCursor)
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.addWidget(self.title_bar)
 
         self.title_separator = QFrame(self)
         self.title_separator.setFrameShape(QFrame.HLine)
         self.title_separator.setFrameShadow(QFrame.Sunken)
         self.title_separator.setStyleSheet("background-color: orange;")
-        main_layout.addWidget(self.title_separator)
+        self.main_layout.addWidget(self.title_separator)
 
-        # Layout pour les colonnes
-        columns_layout = QHBoxLayout()
+        self.columns_layout = QHBoxLayout()
 
-        # Layout pour la colonne de gauche
-        right_layout = QVBoxLayout()
-        right_layout.addWidget(label_email)
-        right_layout.addWidget(self.email_field)
-        right_layout.addWidget(label_level_anxiety)
-        right_layout.addWidget(self.level_anxiety_field)
-        right_layout.addWidget(contact_number)
-        right_layout.addWidget(self.contact_number)
-        right_layout.addWidget(self.submit_button_side)
-        right_layout.addWidget(self.submit_button)
-        right_layout.addStretch()  # Pour étirer les widgets jusqu'en bas
+        self.right_layout = QVBoxLayout()
+        self.right_layout.addWidget(self.label_email)
+        self.right_layout.addWidget(self.email_field)
+        self.right_layout.addWidget(self.label_level_anxiety)
+        self.right_layout.addWidget(self.level_anxiety_field)
+        self.right_layout.addWidget(self.contact_number_label)
+        self.right_layout.addWidget(self.contact_number_field)
+        self.right_layout.addWidget(self.submit_button_side)
+        self.right_layout.addWidget(self.submit_button)
+        self.right_layout.addStretch()
 
-        # Layout pour la colonne de droite
-        left_layout = QVBoxLayout()
-        left_layout.addWidget(QLabel("First Name:"))
-        left_layout.addWidget(self.first_name_field)
-        left_layout.addWidget(QLabel("Last Name:"))
-        left_layout.addWidget(self.last_name_field)
-        left_layout.addWidget(QLabel("Gender:"))
-        left_layout.addWidget(self.sex_field)
-        left_layout.addWidget(QLabel("ID Number:"))
-        left_layout.addWidget(self.id_number)
-        left_layout.addWidget(QLabel("Date of Birth:"))
-        left_layout.addWidget(self.date_edit)
-        left_layout.addWidget(self.selected_date_label)
+        self.left_layout = QVBoxLayout()
+        self.left_layout.addWidget(QLabel("First Name:"))
+        self.left_layout.addWidget(self.first_name_field)
+        self.left_layout.addWidget(QLabel("Last Name:"))
+        self.left_layout.addWidget(self.last_name_field)
+        self.left_layout.addWidget(QLabel("Gender:"))
+        self.left_layout.addWidget(self.sex_field)
+        self.left_layout.addWidget(self.id_number_label)
+        self.left_layout.addWidget(self.id_number_field)
+        self.left_layout.addWidget(QLabel("Date of Birth:"))
+        self.left_layout.addWidget(self.date_edit)
+        self.left_layout.addWidget(self.selected_date_label)
 
-        # Ajout des colonnes à la disposition principale
-        columns_layout.addLayout(left_layout)
-        columns_layout.addLayout(right_layout)
+        # Add columns to main layout
+        self.columns_layout.addLayout(self.left_layout)
+        self.columns_layout.addLayout(self.right_layout)
 
-        # Ajout de la colonne à la disposition principale
-        main_layout.addLayout(columns_layout)
+        # Add columns layout to main layout
+        self.main_layout.addLayout(self.columns_layout)
 
-        # Connexion du signal dateChanged
+        # Connect dateChanged signal
         self.date_edit.dateChanged.connect(self.show_selected_date)
 
-        # Styles
+        # Apply styles
         self.setStyleSheet("""
             QDialog {
-                background-color: #f8cbad;
+                background-color: #f8cba8;
             }
             QLabel {
                 color: black;
                 font-weight: bold;
-                background-color: #f8cbad;
+                background-color: #f8cba8;
             }
             QLineEdit, QComboBox, QDateEdit {
                 background-color: #fbe5d6;
@@ -810,6 +814,7 @@ class NewParticipantDialog(QDialog):
                 background-color: #8c3e13;
             }
         """)
+
     def submit(self):
         # Vérifier si les champs requis sont vides
         if self.first_name_field.text() == '' or self.last_name_field.text() == '':
@@ -851,36 +856,102 @@ class NewParticipantDialog(QDialog):
             self.calendar.hide()
         super().mousePressEvent(event)
 
+    def mousePressEvent(self, event):
+        """Event handler for mouse press events."""
+        self.mousePress = event.pos()
+
+    def mouseMoveEvent(self, event):
+        """Event handler for mouse move events."""
+        if self.mousePress is None:
+            return
+        self.moveWindow = event.globalPos() - self.mousePress
+        self.move(self.moveWindow)
+
+    def mouseReleaseEvent(self, event):
+        """Event handler for mouse release events."""
+        self.mousePress = None
+        self.moveWindow = None
 
 
-class ExistingParticipantDialog(CustomDialog):
+class ExistingParticipantDialog(QDialog):
     """A dialog for selecting an existing participant."""
-
-    participant_id_generated = pyqtSignal(str)
-
-    def __init__(self, parent=None, title="Existing participant"):
-        """Initializes the ExistingparticipantDialog class.
+    """Initializes the ExistingparticipantDialog class.
 
         Args:
             parent (QWidget): The parent widget.
             title (str): The title of the dialog.
         """
-        super().__init__(parent, title)
-        self.mousePressEvent = False
+    participant_id_generated = pyqtSignal(str)
+
+    def __init__(self, parent=None, title="SEARCH PARTICIPANTS"):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setGeometry(450, 100, 550, 200)
+        # Initialize title bar first
+        self.title_bar = TitleBar(self, title)
+
+        # Initialize main layout
+        self.main_layout = QVBoxLayout()
+
+        # Add title bar to main layout
+        self.main_layout.addWidget(self.title_bar)
+
+        # Add title separator
+        self.title_separator = QFrame(self)
+        self.title_separator.setFrameShape(QFrame.HLine)
+        self.title_separator.setFrameShadow(QFrame.Sunken)
+        self.title_separator.setStyleSheet("background-color: orange;")
+        self.main_layout.addWidget(self.title_separator)
+
+        self.id_number_label = QLabel("ID NUMBER :")
+        self.id_number_field = QLineEdit()
+
+        # Connect to database
         self.client = database.get_client()
         self.db = self.client['MRI_PROJECT']
         self.participants_collection = self.db['participants']
 
-        self.id_field = QLineEdit()
-        self.main_layout.addWidget(QLabel('Enter participant ID:'))
-        self.main_layout.addWidget(self.id_field)
-
-        self.submit_button = QPushButton("Submit")
+        self.main_layout.addWidget(self.id_number_label)
+        self.main_layout.addWidget(self.id_number_field)
+        self.submit_button = QPushButton("INITIATE SEARCH")
+        self.submit_button.setCursor(Qt.PointingHandCursor)
         self.submit_button.clicked.connect(self.submit)
         self.main_layout.addWidget(self.submit_button)
 
         self.participant_info = QLabel()
         self.main_layout.addWidget(self.participant_info)
+
+        # Set main layout for the dialog
+        self.setLayout(self.main_layout)
+
+        # Apply styles
+        self.setStyleSheet("""
+               QDialog {
+                   background-color: #f8cba8;
+               }
+               QLabel {
+                   color: black;
+                   font-weight: bold;
+                   background-color: #f8cba8;
+               }
+               QLineEdit, QComboBox, QDateEdit {
+                   background-color: #fbe5d6;
+                   border: 1px solid #c55b26;
+                   border-radius: 5px;
+                   padding: 3px;
+               }
+               QPushButton {
+                   background-color: #f4b283;
+                   color: black;
+                   font-weight: bold;
+                   border: 1px solid #c55b26;
+                   border-radius: 5px;
+                   padding: 6px;
+               }
+               QPushButton:pressed {
+                   background-color: #8c3e13;
+               }
+           """)
 
     def submit(self):
         """Submits the selected participant ID and emits the generated participant ID signal."""
@@ -892,6 +963,21 @@ class ExistingParticipantDialog(CustomDialog):
             self.close()
         else:
             self.participant_info.setText("participant not found")
+    def mousePressEvent(self, event):
+        """Event handler for mouse press events."""
+        self.mousePress = event.pos()
+
+    def mouseMoveEvent(self, event):
+        """Event handler for mouse move events."""
+        if self.mousePress is None:
+            return
+        self.moveWindow = event.globalPos() - self.mousePress
+        self.move(self.moveWindow)
+
+    def mouseReleaseEvent(self, event):
+        """Event handler for mouse release events."""
+        self.mousePress = None
+        self.moveWindow = None
 
 
 class NoteDialog(CustomDialog):
