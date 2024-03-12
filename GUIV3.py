@@ -499,6 +499,7 @@ class MenuWindow(FramelessWindow):
         self.new_participant_dialog = NewParticipantDialog()
         self.existing_participant_dialog = ExistingParticipantDialog()
 
+
         self.show()
 
     def init_ui(self):
@@ -669,44 +670,206 @@ class MicrophoneRecorder:
         self.p.terminate()
 
 
-class ParticipantDetailsWindow(FramelessWindow):
+class ParticipantDetailsWindow(QDialog):
     """A window for handling participant details."""
 
     participant_id_received = pyqtSignal(str)
 
-    def __init__(self):
-        """Initializes the participantDetailsWindow class."""
-        super().__init__(title="participant Details")
-        layout = QVBoxLayout()
-        self.new_participant_button = QPushButton("New Participant")
-        self.existing_participant_button = QPushButton("Existing Participant")
-        layout.addWidget(self.new_participant_button)
-        layout.addWidget(self.existing_participant_button)
-        self.new_participant_button.clicked.connect(self.new_participant)
-        self.existing_participant_button.clicked.connect(self.existing_participant)
-        self.layout.addWidget(QWidget())
-        self.layout.addLayout(layout)
+    def __init__(self, parent=None, title="PARTICIPANT PROFILE"):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setGeometry(450, 100, 550, 200)
 
-    def new_participant(self):
-        """Opens the dialog for adding a new participant."""
-        self.new_participant_dialog = NewParticipantDialog()
-        self.new_participant_dialog.participant_id_generated.connect(self.handle_participant_id)
-        self.new_participant_dialog.show()
+        # Initialize the main layout
+        self.main_layout = QVBoxLayout()
+        self.left_group_box = QGroupBox()
+        self.left_group_box.setFixedSize(400, 500)
 
-    def existing_participant(self):
-        """Opens the dialog for selecting an existing participant."""
-        self.existing_participant_dialog = ExistingParticipantDialog()
-        self.existing_participant_dialog.participant_id_generated.connect(self.handle_participant_id)
-        self.existing_participant_dialog.show()
+        self.right_group_box = QGroupBox()
+        self.right_group_box.setFixedSize(400, 500)
+
+
+        # Create a title bar
+        self.title_bar = TitleBar(self, title)
+        self.main_layout.addWidget(self.title_bar)
+
+        # Add a separator
+        self.title_separator = QFrame(self)
+        self.title_separator.setFrameShape(QFrame.HLine)
+        self.title_separator.setFrameShadow(QFrame.Sunken)
+        self.title_separator.setStyleSheet("background-color: orange;")
+        self.main_layout.addWidget(self.title_separator)
+        label_styles_1 = """
+            QLabel {
+                background-color: #fbe5d6;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 3px;
+            }
+        """
+
+        # Create layouts for left and right columns
+        self.columns_layout = QHBoxLayout()
+        self.left_layout = QVBoxLayout()
+        self.right_layout = QVBoxLayout()
+
+        # Widgets for the left column
+        self.left_layout.addWidget(QLabel("ID NUMBER :"))
+        self.id_field = QLabel()
+        self.id_field.setStyleSheet(label_styles_1)
+        self.left_layout.addWidget(self.id_field)
+
+        self.left_layout.addWidget(QLabel("First Name:"))
+        self.first_name_field = QLabel()
+        self.first_name_field.setStyleSheet(label_styles_1)
+        self.left_layout.addWidget(self.first_name_field)
+
+        self.left_layout.addWidget(QLabel("Last Name:"))
+        self.last_name_field = QLabel()
+        self.last_name_field.setStyleSheet(label_styles_1)
+        self.left_layout.addWidget(self.last_name_field)
+
+        self.left_layout.addWidget(QLabel("Birthdate:"))
+        self.birthdate_field = QLabel()
+        self.birthdate_field.setStyleSheet(label_styles_1)
+        self.left_layout.addWidget(self.birthdate_field)
+
+        self.left_layout.addWidget(QLabel("Age:"))
+        self.age_field = QLabel()
+        self.age_field.setStyleSheet(label_styles_1)
+        self.left_layout.addWidget(self.age_field)
+
+        self.left_layout.addWidget(QLabel("Gender:"))
+        self.gender_field = QLabel()
+        self.gender_field.setStyleSheet(label_styles_1)
+        self.left_layout.addWidget(self.gender_field)
+
+        self.left_layout.addWidget(QLabel("Email:"))
+        self.email_field = QLabel()
+        self.email_field.setStyleSheet(label_styles_1)
+        self.left_layout.addWidget(self.email_field)
+
+        # Widgets for the right column
+        self.right_layout.addWidget(QLabel("Level of Anxiety:"))
+        self.level_anxiety_field = QLabel()
+        self.level_anxiety_field.setStyleSheet(label_styles_1)
+        self.right_layout.addWidget(self.level_anxiety_field)
+
+        self.submit_button_side = QPushButton("ADDITIONAL INFORMATION")
+        self.submit_button_side.setCursor(Qt.PointingHandCursor)
+        self.right_layout.addWidget(self.submit_button_side)
+
+        # Créer un layout horizontal pour la ligne des boutons
+        self.button_layout_1 = QHBoxLayout()
+        self.button_layout_2 = QHBoxLayout()
+
+        self.hist_anx = QPushButton("HISTORY\nOF ANXIETY LEVEL\nCHANGES")
+        self.hist_anx.setCursor(Qt.PointingHandCursor)
+        self.button_layout_1.addWidget(self.hist_anx)
+        self.hist_anx.setFixedSize(150, 65)
+
+        self.hist_mri = QPushButton("HISTORY\nOF\nMRI TEST")
+        self.hist_mri.setCursor(Qt.PointingHandCursor)
+        self.button_layout_1.addWidget(self.hist_mri)
+        self.hist_mri.setFixedSize(150, 65)
+
+        self.right_layout.addLayout(self.button_layout_1)
+
+        self.changes = QPushButton("MAKE CHANGES")
+        self.changes.setCursor(Qt.PointingHandCursor)
+        self.button_layout_2.addWidget(self.changes)
+        self.changes.setFixedSize(150, 65)
+
+        self.test = QPushButton("BEGIN TEST")
+        self.test.setCursor(Qt.PointingHandCursor)
+        self.button_layout_2.addWidget(self.test)
+        self.test.setFixedSize(150, 65)
+
+        self.right_layout.addLayout(self.button_layout_2)
+        self.right_layout.addStretch()
+
+        self.left_group_box.setLayout(self.left_layout)
+        self.right_group_box.setLayout(self.right_layout)
+
+        columns_layout = QHBoxLayout()
+        columns_layout.addWidget(self.left_group_box)
+        columns_layout.addWidget(self.right_group_box)
+
+        # Add left and right layouts to the columns layout
+        self.columns_layout.addWidget(self.left_group_box)
+        self.columns_layout.addWidget(self.right_group_box)
+        # Add the columns layout to the main layout
+        self.main_layout.addLayout(self.columns_layout)
+
+        # Set the main layout for the dialog
+        self.setLayout(self.main_layout)
+
+
+        self.setStyleSheet("""
+                QDialog {
+                    background-color: #f8cba8;
+                }
+                QLabel {
+                color: black;
+                font-weight: bold;
+                background-color: #f8cba8;
+            }
+                QLineEdit, QComboBox, QDateEdit {
+                    background-color: #fbe5d6;
+                    border: 1px solid #c55b26;
+                    border-radius: 5px;
+                    padding: 3px;
+                }
+                QPushButton {
+                    background-color: #f4b283;
+                    color: black;
+                    font-weight: bold;
+                    border: 1px solid #c55b26;
+                    border-radius: 5px;
+                    padding: 6px;
+                }
+                QPushButton:pressed {
+                    background-color: #8c3e13;
+                }
+            """)
+
+    def show_details(self, participant_details):
+        """Affiche les détails du participant dans la fenêtre."""
+        self.first_name_field.setText(f" {participant_details['first_name']}")
+        self.last_name_field.setText(f" {participant_details['last_name']}")
+        self.age_field.setText(f" {participant_details['age']}")
+        self.id_field.setText(f" {participant_details['id']}")
 
     def handle_participant_id(self, participant_id):
-        """Handles the participant ID received from the dialog.
+        """Handles the participant ID received from the caller.
 
         Args:
             participant_id (str): The ID of the selected participant.
         """
-        self.participant_id_received.emit(participant_id)
+        participant = database.find_participant(participant_id)
+        if participant:
+            participant_details_window = ParticipantDetailsWindow()
+            participant_details_window.show_details(participant)
+            participant_details_window.show()
+        else:
+            # Handle the case when the participant is not found
+            print(f"Participant with ID {participant_id} not found.")
 
+    def mousePressEvent(self, event):
+        """Event handler for mouse press events."""
+        self.mousePress = event.pos()
+
+    def mouseMoveEvent(self, event):
+        """Event handler for mouse move events."""
+        if self.mousePress is None:
+            return
+        self.moveWindow = event.globalPos() - self.mousePress
+        self.move(self.moveWindow)
+
+    def mouseReleaseEvent(self, event):
+        """Event handler for mouse release events."""
+        self.mousePress = None
+        self.moveWindow = None
 
 class NewParticipantDialog(QDialog):
     """A dialog for entering information about a new participant."""
@@ -717,7 +880,12 @@ class NewParticipantDialog(QDialog):
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setGeometry(450, 100, 550, 200)
 
+        # Initialize main layout
+        self.main_layout = QVBoxLayout()
+
+        # Add title bar to main layout
         self.title_bar = TitleBar(self, title)
+        self.main_layout.addWidget(self.title_bar)
 
         self.label_email = QLabel("Email:")
         self.email_field = QLineEdit()
@@ -784,8 +952,6 @@ class NewParticipantDialog(QDialog):
         self.main_layout.addLayout(self.columns_layout)
 
         # Connect dateChanged signal
-        self.date_edit.dateChanged.connect(self.show_selected_date)
-
         # Apply styles
         self.setStyleSheet("""
             QDialog {
@@ -815,14 +981,21 @@ class NewParticipantDialog(QDialog):
             }
         """)
 
+    def show_participantdetails(self):
+        self.details_window.show()
+
     def submit(self):
         # Vérifier si les champs requis sont vides
         if self.first_name_field.text() == '' or self.last_name_field.text() == '':
             QMessageBox.warning(self, "Warning", "Please fill in all required fields.")
             return
 
-        selected_date = self.calendar.selectedDate()
-        selected_date = datetime.datetime(selected_date.year(), selected_date.month(), selected_date.day())
+        selected_date = self.date_edit.date().toPyDate()
+        selected_date_str = selected_date.strftime("%Y-%m-%d")
+        self.selected_date_label.setText(selected_date_str)
+        print(selected_date_str)
+
+        selected_date = datetime.datetime(selected_date.year, selected_date.month, selected_date.day)
         current_date = datetime.datetime.now()
         age = current_date.year - selected_date.year - (
                 (current_date.month, current_date.day) < (selected_date.month, selected_date.day))
@@ -840,20 +1013,23 @@ class NewParticipantDialog(QDialog):
 
         if success:
             self.participant_id_generated.emit(str(success))
+            self.show_participantdetails()
             self.close()
         else:
             QMessageBox.critical(self, "Error", "DB ERROR")
 
     def show_selected_date(self, age):
-        self.selected_date_label.setText(age)
+        selected_date = self.date_edit.date().toString(Qt.ISODate)
+        self.selected_date_label.setText(selected_date)
+
     def mousePressEvent(self, event):
         if self.date_edit.underMouse():
-            self.calendar.setGeometry(
+            self.date_edit.setGeometry(
                 self.date_edit.mapToGlobal(self.date_edit.rect().bottomLeft())
             )
-            self.calendar.show()
+            self.date_edit.show()
         else:
-            self.calendar.hide()
+            self.date_edit.hide()
         super().mousePressEvent(event)
 
     def mousePressEvent(self, event):
@@ -904,7 +1080,7 @@ class ExistingParticipantDialog(QDialog):
         self.main_layout.addWidget(self.title_separator)
 
         self.id_number_label = QLabel("ID NUMBER :")
-        self.id_number_field = QLineEdit()
+        self.id_field = QLineEdit()
 
         # Connect to database
         self.client = database.get_client()
@@ -912,7 +1088,7 @@ class ExistingParticipantDialog(QDialog):
         self.participants_collection = self.db['participants']
 
         self.main_layout.addWidget(self.id_number_label)
-        self.main_layout.addWidget(self.id_number_field)
+        self.main_layout.addWidget(self.id_field)
         self.submit_button = QPushButton("INITIATE SEARCH")
         self.submit_button.setCursor(Qt.PointingHandCursor)
         self.submit_button.clicked.connect(self.submit)
@@ -923,6 +1099,8 @@ class ExistingParticipantDialog(QDialog):
 
         # Set main layout for the dialog
         self.setLayout(self.main_layout)
+        self.participant_details_window = ParticipantDetailsWindow()
+
 
         # Apply styles
         self.setStyleSheet("""
@@ -960,7 +1138,11 @@ class ExistingParticipantDialog(QDialog):
             self.participant_info.setText(
                 f"First Name: {participant['first_name']}\nLast Name: {participant['last_name']}\nAge: {participant['age']}\nSex: {participant['sex']}")
             self.participant_id_generated.emit(self.id_field.text())
+            self.participant_details_window = ParticipantDetailsWindow()
+            self.participant_details_window.show_details(participant)
+            self.participant_details_window.show()
             self.close()
+
         else:
             self.participant_info.setText("participant not found")
     def mousePressEvent(self, event):
