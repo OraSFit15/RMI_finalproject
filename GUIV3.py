@@ -1,6 +1,6 @@
 import sys
 import datetime
-
+from PyQt5.QtCore import QObject
 import PyQt5
 import database
 import pyaudio
@@ -208,7 +208,6 @@ class OpticalFlowApp(QWidget):
         return prev_gray, movement_detected, movement_value
 
 
-
 class FramelessWindow(QMainWindow):
     """A frameless window with a title bar."""
 
@@ -234,12 +233,14 @@ class FramelessWindow(QMainWindow):
         self.title_separator.setStyleSheet("background-color: orange;")
 
         self.setFixedSize(500, 300)
+
     """def paintEvent(self, event):
         
         painter = QPainter(self)
         pen = QPen(QColor("#cc692f"), 30, Qt.SolidLine)
         painter.setPen(pen)
         painter.drawRect(self.rect())"""
+
     def mousePressEvent(self, event):
         """Event handler for mouse press events."""
         self.mousePress = event.pos()
@@ -298,7 +299,6 @@ class CustomDialog(QDialog):
         self.moveWindow = None
 
 
-
 class TitleBar(QWidget):
     """A custom title bar for the window."""
 
@@ -339,6 +339,23 @@ class TitleButton(QPushButton):
         self.setFixedHeight(20)
         self.clicked.connect(self.clickedEvent)
 
+        self.setStyleSheet("""
+            .TitleButton {
+                background-color: #f4b283;
+                color: black;
+                font-weight: bold;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 6px;
+            }
+
+    
+            .TitleButton:pressed {
+                background-color: #8c3e13;
+
+            }
+        """)
+
     def clickedEvent(self):
         """Handles the button's click event."""
         if self.text() == "X":
@@ -347,12 +364,30 @@ class TitleButton(QPushButton):
             self.parent.parent.showMinimized()
 
 
-class Login(FramelessWindow):
+class Login(QWidget):
     """The login window for the Mock MRI Scanner application."""
 
-    def __init__(self):
+    def __init__(self, parent=None, title="MOCK MRI SCANNER"):
         """Initializes the Login class."""
-        super().__init__(title="MOCK MRI SCANNER")
+        super().__init__(parent)
+
+        # Create a main layout for the window
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
+
+        self.title_bar = TitleBar(self, title)
+        self.password_input = None
+        self.appline = None
+        self.appname = None
+        self.password = None
+        self.height = None
+        self.width = None
+        self.left = None
+        self.top = None
+        self.login = None
+        self.username_input = None
+        self.username = None
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.init_ui()
         self.init_geometry()
@@ -360,19 +395,29 @@ class Login(FramelessWindow):
         self.db = self.client["MRI_PROJECT"]
         self.user_collection = self.db["USERS"]
         self.users = database.Users(self.user_collection)
-        # print(f"user_collection: {self.user_collection}, users: {self.users}")
-        # print(self.user_collection.find_one({"username": "admin"}))
 
+        # Create a container widget and its layout for the content
         self.container = QWidget()
         self.container_layout = QVBoxLayout()
+        self.container_layout.setAlignment(Qt.AlignCenter)  # Align the content to the center
         self.container.setLayout(self.container_layout)
-        self.layout.addWidget(self.container)
 
-        self.init_login_button()
-        self.init_username()
-        self.init_password()
+        # Add the title bar and container to the main layout
+        self.main_layout.addWidget(self.title_bar)
+        self.title_separator = QFrame(self)
+        self.title_separator.setFrameShape(QFrame.HLine)
+        self.title_separator.setFrameShadow(QFrame.Sunken)
+        self.title_separator.setStyleSheet("background-color: orange;")
+        self.main_layout.addWidget(self.title_separator)
+        self.main_layout.addWidget(self.container)
+
+        # Initialize other UI elements
         self.init_appname()
         self.init_appline()
+        self.init_username()
+        self.init_password()
+        self.init_login_button()
+
         self.show()
 
     def init_ui(self):
@@ -380,73 +425,89 @@ class Login(FramelessWindow):
         self.setWindowIcon(QIcon("icon.png"))
         self.setWindowTitle("Login")
 
-
-
     def init_geometry(self):
         """Sets up the initial geometry of the Login window."""
-        self.top = 100
+        self.top = 450
         self.left = 100
-        self.width = 500
-        self.height = 220
+        self.width = 550
+        self.height = 200
         self.setGeometry(self.top, self.left, self.width, self.height)
-        self.setStyleSheet("QWidget { border-radius: 20px;background-color: #fbe5d6;  }")
-
+        self.setStyleSheet("""background-color: #f8cba8; """)
 
     def init_login_button(self):
         """Initializes the Login button."""
-        self.login = QPushButton(self.central_widget)
-        self.login.setText("LOGIN")
-        self.login.setGeometry(215, 150, 80, 20)
+        self.login = QPushButton("LOGIN")
         self.login.setFont(QFont('Roboto', 12))
         self.login.setStyleSheet(
-            " border-radius : 5px; font-size: 10px; background-color:  #f8cba8; color: black;"
-            "QPushButton { border-radius: 30px; }")
+            """ QPushButton {""""""
+                background-color: #f4b283;
+                color: black;
+                font-weight: bold;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 6px;
+            }
+            QPushButton:pressed {
+                background-color: #8c3e13;
+            }""")
+        self.login.setFixedSize(100, 30)
         self.login.setCursor(Qt.PointingHandCursor)
-
         self.login.clicked.connect(self.login_clicked)
+
+        self.container_layout.addWidget(self.login)  # Ajouté au layout du conteneur
 
     def init_username(self):
         """Initializes the Username label and input field."""
-        self.username = QLabel(self.central_widget)
-        self.username.setText("USERNAME:")
-        self.username.move(95, 95)
-        self.username.setFont(QFont('Roboto', 12))
-        self.username.setStyleSheet("font-size: 15px;")
-        self.username_input = QLineEdit(self.central_widget)
-        self.username_input.setGeometry(180, 100, 200, 20)
-        self.username_input.setFont(QFont('Roboto', 15))
-        self.username_input.setStyleSheet("font-size: 15px;background-color:white;")
+        self.username = QLabel("USERNAME:")
+        self.username.setStyleSheet(""" color: black;
+                       font-weight: bold;
+                       background-color: #f8cba8;""")
+        self.username_input = QLineEdit()
+        self.username_input.setFixedSize(250, 20)
+        self.username_input.setStyleSheet(""" color: black;
+                font-weight: bold;
+                background-color: #f8cba8;""")
+        self.username_input.setStyleSheet("""background-color: #fbe5d6;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 3px;""")
+
+        self.container_layout.addWidget(self.username)  # Ajouté au layout du conteneur
+        self.container_layout.addWidget(self.username_input)  # Ajouté au layout du conteneur
 
     def init_password(self):
         """Initializes the Password label and input field."""
-        self.password = QLabel(self.central_widget)
-        self.password.setText("PASSWORD:")
-        self.password.move(95, 120)
-        self.password.setFont(QFont('Roboto', 12))
-        self.password.setStyleSheet("font-size: 15px;")
-
-        self.password_input = QLineEdit(self.central_widget)
-        self.password_input.setGeometry(180, 125, 200, 20)
-        self.password_input.setFont(QFont('Roboto', 15))
-        self.password_input.setStyleSheet("font-size: 15px;background-color:white;")
+        self.password = QLabel("PASSWORD:")
+        self.password.setStyleSheet(""" color: black;
+                       font-weight: bold;
+                       background-color: #f8cba8;""")
+        self.password_input = QLineEdit()
+        self.password_input.setFixedSize(250, 20)
+        self.password_input.setStyleSheet(""" color: black;
+                font-weight: bold;
+                background-color: #f8cba8;""")
+        self.password_input.setStyleSheet("""background-color: #fbe5d6;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 3px;""")
         self.password_input.setEchoMode(QLineEdit.Password)
+
+        self.container_layout.addWidget(self.password)  # Ajouté au layout du conteneur
+        self.container_layout.addWidget(self.password_input)  # Ajouté au layout du conteneur
 
     def init_appname(self):
         """Initializes the application name label."""
-        self.appname = QLabel(self.central_widget)
-        self.appname.setText("Welcome, insert your credentials to continue")
-        self.appname.move(60, 50)
+        self.appname = QLabel("Welcome, insert your credentials to continue")  # Correction apportée ici
         self.appname.setFont(QFont('Roboto', 12))
         self.appname.setStyleSheet("font-size: 20px;")
-        self.appname.adjustSize()
+        self.container_layout.addWidget(self.appname)  # Ajouté au layout du conteneur
 
     def init_appline(self):
         """Initializes the horizontal lines below the labels and input fields."""
-        self.appline = QFrame(self.central_widget)
-        self.appline.setGeometry(100, 80, 300, 2)
+        self.appline = QFrame()
+        self.appline.setGeometry(100, 180, 300, 2)
         self.appline.setStyleSheet("background-color: #f8cbad;")
-
-        self.appline2 = QFrame(self.central_widget)
+        self.appline2 = QFrame()
         self.appline2.setGeometry(100, 180, 300, 2)
         self.appline2.setStyleSheet("background-color: #f8cbad;")
 
@@ -462,6 +523,22 @@ class Login(FramelessWindow):
         else:
             QMessageBox.about(self, "Error", "Wrong username or password")
 
+    def mousePressEvent(self, event):
+        """Event handler for mouse press events."""
+        self.mousePress = event.pos()
+
+    def mouseMoveEvent(self, event):
+        """Event handler for mouse move events."""
+        if self.mousePress is None:
+            return
+        self.moveWindow = event.globalPos() - self.mousePress
+        self.move(self.moveWindow)
+
+    def mouseReleaseEvent(self, event):
+        """Event handler for mouse release events."""
+        self.mousePress = None
+        self.moveWindow = None
+
 
 class MenuWindow(FramelessWindow):
     def __init__(self):
@@ -472,12 +549,12 @@ class MenuWindow(FramelessWindow):
         self.exs = None
         self.new = None
         self.setWindowFlags(Qt.FramelessWindowHint)
-        self.label = QLabel("Movement Monitor MRI",self)
-        self.label.setGeometry(135,50,100,50)
+        self.label = QLabel("Movement Monitor MRI", self)
+        self.label.setGeometry(135, 50, 100, 50)
         self.label.setFixedSize(500, 65)
         self.label.setStyleSheet(
             " font-size: 20px;  color: black;font-weight: bold;"
-            )
+        )
         self.init_ui()
         self.init_geometry()
         self.client = database.get_client()
@@ -499,7 +576,6 @@ class MenuWindow(FramelessWindow):
         self.new_participant_dialog = NewParticipantDialog()
         self.existing_participant_dialog = ExistingParticipantDialog()
 
-
         self.show()
 
     def init_ui(self):
@@ -509,6 +585,7 @@ class MenuWindow(FramelessWindow):
 
     def close_window(self):
         self.close()
+
     def init_geometry(self):
         """Sets up the initial geometry of the Login window."""
         self.top = 450
@@ -520,6 +597,7 @@ class MenuWindow(FramelessWindow):
 
     def show_new_participant_dialog(self):
         self.new_participant_dialog.show()
+
     def show_exs_participant_dialog(self):
         self.existing_participant_dialog.show()
 
@@ -567,7 +645,7 @@ class MenuWindow(FramelessWindow):
         )
         self.stat.setCursor(Qt.PointingHandCursor)
         self.stat.clicked.connect(self.close_window)
-        #self.stat.clicked.connect(self.login_clicked)
+        # self.stat.clicked.connect(self.login_clicked)
 
     def init_set_button(self):
         """Initializes the Login button."""
@@ -582,7 +660,7 @@ class MenuWindow(FramelessWindow):
         )
         self.set.setCursor(Qt.PointingHandCursor)
         self.set.clicked.connect(self.close_window)
-        #self.login.clicked.connect(self.login_clicked)
+        # self.login.clicked.connect(self.login_clicked)
 
 
 class SoundLoader(QThread):
@@ -677,6 +755,8 @@ class ParticipantDetailsWindow(QDialog):
 
     def __init__(self, parent=None, title="PARTICIPANT PROFILE"):
         super().__init__(parent)
+        self.moveWindow = None
+        self.mousePress = None
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setGeometry(450, 100, 550, 200)
 
@@ -687,7 +767,6 @@ class ParticipantDetailsWindow(QDialog):
 
         self.right_group_box = QGroupBox()
         self.right_group_box.setFixedSize(400, 500)
-
 
         # Create a title bar
         self.title_bar = TitleBar(self, title)
@@ -804,7 +883,6 @@ class ParticipantDetailsWindow(QDialog):
         # Set the main layout for the dialog
         self.setLayout(self.main_layout)
 
-
         self.setStyleSheet("""
                 QDialog {
                     background-color: #f8cba8;
@@ -871,12 +949,20 @@ class ParticipantDetailsWindow(QDialog):
         self.mousePress = None
         self.moveWindow = None
 
+    def closeEvent(self, event):
+
+        menuWindow = MenuWindow()
+        menuWindow.show()
+
+
 class NewParticipantDialog(QDialog):
     """A dialog for entering information about a new participant."""
     participant_id_generated = pyqtSignal(str)
 
     def __init__(self, parent=None, title="NEW PARTICIPANT FORM"):
         super().__init__(parent)
+        self.mousePress = None
+        self.moveWindow = None
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setGeometry(450, 100, 550, 200)
 
@@ -950,6 +1036,7 @@ class NewParticipantDialog(QDialog):
 
         # Add columns layout to main layout
         self.main_layout.addLayout(self.columns_layout)
+        self.submit_button_side.clicked.connect(self.handle_additional_information_button_clicked)
 
         # Connect dateChanged signal
         # Apply styles
@@ -981,11 +1068,7 @@ class NewParticipantDialog(QDialog):
             }
         """)
 
-    def show_participantdetails(self):
-        self.details_window.show()
-
     def submit(self):
-        # Vérifier si les champs requis sont vides
         if self.first_name_field.text() == '' or self.last_name_field.text() == '':
             QMessageBox.warning(self, "Warning", "Please fill in all required fields.")
             return
@@ -1013,7 +1096,6 @@ class NewParticipantDialog(QDialog):
 
         if success:
             self.participant_id_generated.emit(str(success))
-            self.show_participantdetails()
             self.close()
         else:
             QMessageBox.critical(self, "Error", "DB ERROR")
@@ -1021,16 +1103,6 @@ class NewParticipantDialog(QDialog):
     def show_selected_date(self, age):
         selected_date = self.date_edit.date().toString(Qt.ISODate)
         self.selected_date_label.setText(selected_date)
-
-    def mousePressEvent(self, event):
-        if self.date_edit.underMouse():
-            self.date_edit.setGeometry(
-                self.date_edit.mapToGlobal(self.date_edit.rect().bottomLeft())
-            )
-            self.date_edit.show()
-        else:
-            self.date_edit.hide()
-        super().mousePressEvent(event)
 
     def mousePressEvent(self, event):
         """Event handler for mouse press events."""
@@ -1048,6 +1120,16 @@ class NewParticipantDialog(QDialog):
         self.mousePress = None
         self.moveWindow = None
 
+    def closeEvent(self, event):
+        menuWindow = MenuWindow()
+        menuWindow.show()
+
+    def handle_additional_information_button_clicked(self):
+        """Handles the click event of the additional information button."""
+        button_clicked = self.sender()
+        if button_clicked == self.submit_button_side:
+            note_dialog = NoteDialog(note="")
+            note_dialog.exec_()
 
 class ExistingParticipantDialog(QDialog):
     """A dialog for selecting an existing participant."""
@@ -1061,6 +1143,8 @@ class ExistingParticipantDialog(QDialog):
 
     def __init__(self, parent=None, title="SEARCH PARTICIPANTS"):
         super().__init__(parent)
+        self.moveWindow = None
+        self.mousePress = None
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setGeometry(450, 100, 550, 200)
         # Initialize title bar first
@@ -1100,7 +1184,6 @@ class ExistingParticipantDialog(QDialog):
         # Set main layout for the dialog
         self.setLayout(self.main_layout)
         self.participant_details_window = ParticipantDetailsWindow()
-
 
         # Apply styles
         self.setStyleSheet("""
@@ -1145,6 +1228,7 @@ class ExistingParticipantDialog(QDialog):
 
         else:
             self.participant_info.setText("participant not found")
+
     def mousePressEvent(self, event):
         """Event handler for mouse press events."""
         self.mousePress = event.pos()
@@ -1161,26 +1245,78 @@ class ExistingParticipantDialog(QDialog):
         self.mousePress = None
         self.moveWindow = None
 
+    def closeEvent(self, event):
+        menuWindow = MenuWindow()
+        menuWindow.show()
 
-class NoteDialog(CustomDialog):
+
+class NoteDialog(QDialog):
     """A dialog for displaying and editing a note."""
 
-    def __init__(self, note, parent=None, title="Note"):
+    def __init__(self,note="", parent=None, title="ADDITIONAL INFORMATION"):
         """Initializes the NoteDialog class.
 
         Args:
-            note (str): The initial text of the note.
             parent (QWidget): The parent widget.
             title (str): The title of the dialog.
         """
-        super().__init__(parent, title)
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setGeometry(450, 100, 550, 200)
+
+        # Initialize main layout
+        self.main_layout = QVBoxLayout()
+
+        # Add title bar to main layout
+        self.title_bar = TitleBar(self, title)
+        self.main_layout.addWidget(self.title_bar)
+
+        # Add QTextEdit for note input
         self.note_text_edit = QTextEdit()
         self.note_text_edit.setMinimumSize(300, 200)
-        self.note_text_edit.setText(note)
-        self.ok_button = QPushButton("OK")
-        self.ok_button.clicked.connect(self.accept)
         self.main_layout.addWidget(self.note_text_edit)
+
+        # Add OK button to save note
+        self.ok_button = QPushButton("OK")
+        self.ok_button.setCursor(Qt.PointingHandCursor)
+
+        self.ok_button.clicked.connect(self.get_note)
+
         self.main_layout.addWidget(self.ok_button)
+
+        # Set the main layout for the dialog
+        self.setLayout(self.main_layout)
+
+        self.setModal(True)  # Set the dialog as modal
+
+        self.setStyleSheet("""
+                QDialog {
+                    background-color: #f8cba8;
+                }
+                QLabel {
+                    color: black;
+                    font-weight: bold;
+                    background-color: #f8cba8;
+                }
+                QLineEdit, QComboBox, QDateEdit {
+                    background-color: #fbe5d6;
+                    border: 1px solid #c55b26;
+                    border-radius: 5px;
+                    padding: 3px;
+                }
+                QPushButton {
+                    background-color: #f4b283;
+                    color: black;
+                    font-weight: bold;
+                    border: 1px solid #c55b26;
+                    border-radius: 5px;
+                    padding: 6px;
+                }
+                QPushButton:pressed {
+                    background-color: #8c3e13;
+                }
+            """)
 
     def get_note(self):
         """Returns the text of the note.
@@ -1190,102 +1326,139 @@ class NoteDialog(CustomDialog):
         """
         return self.note_text_edit.toPlainText()
 
+    def mousePressEvent(self, event):
+        """Event handler for mouse press events."""
+        self.mousePress = event.pos()
 
-class TestHistoryWindow(FramelessWindow):
-    """A window for displaying the test history of a participant."""
+    def mouseMoveEvent(self, event):
+        """Event handler for mouse move events."""
+        if self.mousePress is None:
+            return
+        self.moveWindow = event.globalPos() - self.mousePress
+        self.move(self.moveWindow)
 
-    def __init__(self, test_data, db, participant_id):
-        """Initializes the TestHistoryWindow class.
+    def mouseReleaseEvent(self, event):
+        """Event handler for mouse release events."""
+        self.mousePress = None
+        self.moveWindow = None
+class TestHistoryWindow(QDialog):
+    """A dialog for displaying the test history of a participant."""
+
+    def __init__(self, test_data, db, participant_id,parent=None, title="HISTORY WINDOW"):
+        """Initializes the TestHistoryDialog class.
 
         Args:
             test_data (list): A list of dictionaries representing the test data.
             db: The database reference.
             participant_id (str): The ID of the participant.
         """
-        super().__init__(title="Test History")
+        super().__init__()
+
+        self.table = None
+        self.main_layout = None
+        self.title_bar = None
         self.test_data = test_data
         self.db = db
         self.participant_id = participant_id
         self.init_ui()
 
     def init_ui(self):
-        """Initializes the user interface of the window."""
-        self.table = QTableWidget()
-        self.table.setColumnCount(6)
-        self.table.setHorizontalHeaderLabels(['Test #', 'Date', 'Movement #', 'Test', 'MRI', 'Note'])
-        self.table.resizeColumnsToContents()
+            """Initializes the user interface of the dialog."""
+            self.main_layout = QVBoxLayout(self)
+            self.setWindowFlags(Qt.FramelessWindowHint)
+            self.title_bar = TitleBar(self, "TEST HISTORY")
+            self.main_layout.addWidget(self.title_bar)
+            self.setGeometry(450, 100, 550, 200)
 
+            # Ajoutez la ligne de séparation de titre
+            self.title_separator = QFrame(self)
+            self.title_separator.setFrameShape(QFrame.HLine)
+            self.title_separator.setFrameShadow(QFrame.Sunken)
+            self.title_separator.setStyleSheet("background-color: orange;")
+            self.main_layout.addWidget(self.title_separator)
+
+            # Créez et configurez le widget de tableau
+            self.table = QTableWidget()
+            self.table.setColumnCount(6)
+            self.table.setHorizontalHeaderLabels(['Test #', 'Date', 'Movement #', 'Test', 'MRI', 'Note'])
+            self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            self.main_layout.addWidget(self.table)
+
+            # Remplissez le tableau avec les données de test
+            self.populate_table()
+
+            self.setStyleSheet("""
+                  QDialog {
+                      background-color: #f8cba8;
+                  }
+                  QLabel {
+                      color: black;
+                      font-weight: bold;
+                      background-color: #f8cba8;
+                  }
+                  QLineEdit, QComboBox, QDateEdit {
+                      background-color: #fbe5d6;
+                      border: 1px solid #c55b26;
+                      border-radius: 5px;
+                      padding: 3px;
+                  }
+                  QPushButton {
+                      background-color: #f4b283;
+                      color: black;
+                      font-weight: bold;
+                      border: 1px solid #c55b26;
+                      border-radius: 5px;
+                      padding: 6px;
+                  }
+                  QPushButton:pressed {
+                      background-color: #8c3e13;
+                  }
+              """)
+
+    def populate_table(self):
+        """Populates the table widget with test data."""
         if self.test_data:
             self.test_data = list(self.test_data)
             self.table.setRowCount(len(self.test_data))
 
-            self.simulation_result_comboboxes = [QComboBox() for _ in self.test_data]
-            self.mri_test_result_comboboxes = [QComboBox() for _ in self.test_data]
-            self.note_buttons = [QPushButton("View") for _ in self.test_data]
-
             for i, data in enumerate(self.test_data):
                 self.table.setItem(i, 0, QTableWidgetItem(str(data['test_id'])))
-                timestamp = datetime.fromisoformat(str(data['timestamp']))
-                formatted_timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                timestamp = QDateTime.fromSecsSinceEpoch(int(data['timestamp']))
+                formatted_timestamp = timestamp.toString(Qt.DefaultLocaleLongDate)
                 self.table.setItem(i, 1, QTableWidgetItem(formatted_timestamp))
                 self.table.setItem(i, 2, QTableWidgetItem(str(data['movement_amount'])))
+                self.table.setItem(i, 3, QTableWidgetItem(data['test_result']))
+                self.table.setItem(i, 4, QTableWidgetItem(data['mri_result']))
 
-                # Test Result column
-                cb = self.simulation_result_comboboxes[i]
-                cb.addItems(['Failed', 'Passed'])
-                cb.setCurrentText(data['test_result'])
-                cb.currentTextChanged.connect(self.handle_combobox_text_changed)
-                self.table.setCellWidget(i, 3, cb)
+                # Add note button to cell
+                note_button = QPushButton("View")
+                note_button.clicked.connect(lambda _, index=i: self.handle_note_button_clicked(index))
+                self.table.setCellWidget(i, 5, note_button)
 
-                # MRI Result column
-                cb = self.mri_test_result_comboboxes[i]
-                cb.addItems(['Failed', 'Passed'])
-                cb.setCurrentText(data['mri_result'])
-                cb.currentTextChanged.connect(self.handle_combobox_text_changed)
-                self.table.setCellWidget(i, 4, cb)
-
-                button = self.note_buttons[i]
-                button.clicked.connect(self.handle_note_button_clicked)
-                self.table.setCellWidget(i, 5, button)
-
-            # Adjust column width to content
-            self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-
-        self.layout.addWidget(self.table)
-        self.table.resizeColumnsToContents()
-        self.table.resizeRowsToContents()
-        self.setMinimumSize(680, 600)
-
-    def handle_combobox_text_changed(self, text):
-        """Handles the text changed event of the comboboxes.
-
-        Args:
-            text (str): The new text of the combobox.
-        """
-        sender = self.sender()
-        if sender in self.simulation_result_comboboxes:
-            index = self.simulation_result_comboboxes.index(sender)
-            column = 3
-        else:
-            index = self.mri_test_result_comboboxes.index(sender)
-            column = 4
-
-        self.db.update_test_result(self.participant_id, index + 1, self.table.cellWidget(index, 3).currentText(),
-                                   self.table.cellWidget(index, 4).currentText())
-
-    def handle_note_button_clicked(self):
+    def handle_note_button_clicked(self, index):
         """Handles the click event of the note buttons."""
-        sender = self.sender()
-        index = self.note_buttons.index(sender)
         note = self.test_data[index].get('note', '')
         note_dialog = NoteDialog(note)
         if note_dialog.exec_() == QDialog.Accepted:
             new_note = note_dialog.get_note()
             self.db.update_note(self.participant_id, index + 1, new_note)
-
-            # Update the note in the table immediately
             self.test_data[index]['note'] = new_note
-            self.table.cellWidget(index, 5).setText("View")
+            self.populate_table()
+    def mousePressEvent(self, event):
+        """Event handler for mouse press events."""
+        self.mousePress = event.pos()
+
+    def mouseMoveEvent(self, event):
+        """Event handler for mouse move events."""
+        if self.mousePress is None:
+            return
+        self.moveWindow = event.globalPos() - self.mousePress
+        self.move(self.moveWindow)
+
+    def mouseReleaseEvent(self, event):
+        """Event handler for mouse release events."""
+        self.mousePress = None
+        self.moveWindow = None
 
 
 class MainWindow(FramelessWindow):
@@ -1550,6 +1723,7 @@ class MainWindow(FramelessWindow):
 
     def show_test_history(self):
         """Displays the test history window."""
+        self.participant_id = "1234"
         if self.participant_id is not None:
             test_data = self.db.get_participant_data(self.participant_id)
             if test_data:  # check if test_data is not empty
@@ -1572,8 +1746,7 @@ class MainWindow(FramelessWindow):
     def display_results(self):
         """Displays the test results."""
         if self.participant_id is not None and self.movement_count is not None:
-            QMessageBox.information(self, "Test Results",
-                                    f"The participant moved {self.movement_count} times during the simulation")
+            QMessageBox.information(self, "Test Results",  f"The participant moved {self.movement_count} times during the simulation")
         else:
             QMessageBox.critical(self, "Error", "No test data available.")
 
@@ -1616,10 +1789,8 @@ class MainWindow(FramelessWindow):
         event.accept()
 
 
-
-
 if __name__ == '__main__':
     App = QApplication(sys.argv)
     qt_material.apply_stylesheet(App, theme='dark_orange.xml')
-    window = MenuWindow()
+    window = MainWindow()
     sys.exit(App.exec_())
