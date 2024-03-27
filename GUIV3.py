@@ -911,12 +911,16 @@ class ParticipantDetailsWindow(QDialog):
                 }
             """)
 
-    def show_details(self, participant_details):
+    def show_details(self, participant_details, participant_id):
         """Affiche les détails du participant dans la fenêtre."""
         self.first_name_field.setText(f" {participant_details['first_name']}")
         self.last_name_field.setText(f" {participant_details['last_name']}")
         self.age_field.setText(f" {participant_details['age']}")
-        self.id_field.setText(f" {participant_details['id']}")
+        self.id_field.setText(f" {participant_id}")
+        self.level_anxiety_field.setText(f" {participant_details['level_anxiety']}")
+        self.email_field.setText(f" {participant_details['email']}")
+        self.birthdate_field.setText(f" {participant_details['birthdate']}")
+        self.gender_field.setText(f" {participant_details['sex']}")
 
     def handle_participant_id(self, participant_id):
         """Handles the participant ID received from the caller.
@@ -927,7 +931,7 @@ class ParticipantDetailsWindow(QDialog):
         participant = database.find_participant(participant_id)
         if participant:
             participant_details_window = ParticipantDetailsWindow()
-            participant_details_window.show_details(participant)
+            participant_details_window.show_details(participant, participant_id)  # Passer participant_id
             participant_details_window.show()
         else:
             # Handle the case when the participant is not found
@@ -1090,8 +1094,13 @@ class NewParticipantDialog(QDialog):
         success = database.insert_participant(
             self.first_name_field.text(),
             self.last_name_field.text(),
+            self.sex_field.currentText(),
+            self.id_number_field.text(),
+            self.selected_date_label.text(),
             age,
-            self.sex_field.currentText()
+            self.email_field.text(),
+            self.contact_number_field.text(),
+            self.level_anxiety_field.text(),
         )
 
         if success:
@@ -1217,12 +1226,14 @@ class ExistingParticipantDialog(QDialog):
     def submit(self):
         """Submits the selected participant ID and emits the generated participant ID signal."""
         participant = database.find_participant(self.id_field.text())
+        participant_id = self.id_field.text()
+
         if participant:
             self.participant_info.setText(
                 f"First Name: {participant['first_name']}\nLast Name: {participant['last_name']}\nAge: {participant['age']}\nSex: {participant['sex']}")
             self.participant_id_generated.emit(self.id_field.text())
             self.participant_details_window = ParticipantDetailsWindow()
-            self.participant_details_window.show_details(participant)
+            self.participant_details_window.show_details(participant, participant_id)
             self.participant_details_window.show()
             self.close()
 
@@ -1341,6 +1352,7 @@ class NoteDialog(QDialog):
         """Event handler for mouse release events."""
         self.mousePress = None
         self.moveWindow = None
+
 class TestHistoryWindow(QDialog):
     """A dialog for displaying the test history of a participant."""
 
@@ -1792,5 +1804,5 @@ class MainWindow(FramelessWindow):
 if __name__ == '__main__':
     App = QApplication(sys.argv)
     qt_material.apply_stylesheet(App, theme='dark_orange.xml')
-    window = MainWindow()
+    window = MenuWindow()
     sys.exit(App.exec_())

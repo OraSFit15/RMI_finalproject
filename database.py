@@ -6,6 +6,8 @@ from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 import bcrypt
 import base64
+import hashlib
+
 
 """change participant from patient name"""
 class MongoDB:
@@ -290,7 +292,7 @@ def get_client():
     return MongoClient(connection_string)
 
 
-def insert_participant(first_name, last_name, age, sex):
+def insert_participant(first_name, last_name, sex, id_number, birthdate, age, email, contact, level_anxiety):
     """
     Inserts a new participant into the 'participants' collection in the database.
 
@@ -299,6 +301,7 @@ def insert_participant(first_name, last_name, age, sex):
         last_name (str): The last name of the participant.
         age (int): The age of the participant.
         sex (str): The sex of the participant.
+        id_number (str): The ID number of the participant.
 
     Returns:
         str or bool: The generated participant ID if successful, False otherwise.
@@ -309,12 +312,20 @@ def insert_participant(first_name, last_name, age, sex):
     participant_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
     try:
+        # Hashing id_number with SHA-256
+        hashed_id = hashlib.sha256(id_number.encode()).hexdigest()
+
         participants_collection.insert_one({
-            'id': participant_id,
+            'id_generate': participant_id,
             'first_name': first_name,
             'last_name': last_name,
+            'sex': sex,
+            'id': hashed_id,
+            'birthdate': birthdate,
             'age': age,
-            'sex': sex
+            'email': email,
+            'contact': contact,
+            'level_anxiety': level_anxiety,
         })
         client.close()
         return participant_id
@@ -322,8 +333,7 @@ def insert_participant(first_name, last_name, age, sex):
         client.close()
         return False
 
-
-def find_participant(participant_id):
+def find_participant(id_number):
     """
     Finds and returns a participant from the 'participants' collection in the database.
 
@@ -338,13 +348,15 @@ def find_participant(participant_id):
     participants_collection = db['PARTICIPANTS']
 
     try:
-        participant = participants_collection.find_one({'id': participant_id})
+        # Hashing participant_id with SHA-256
+        hashed_id = hashlib.sha256(id_number.encode()).hexdigest()
+
+        participant = participants_collection.find_one({'id': hashed_id})
         client.close()
         return participant
     except PyMongoError:
         client.close()
         return None
-
 
 def main():
     db = MongoDB('MRI_PROJECT', ['USERS', 'PARTICIPANTS', 'MOVEMENT_DATA'])
