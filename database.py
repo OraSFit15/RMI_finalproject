@@ -292,6 +292,46 @@ def get_client():
     return MongoClient(connection_string)
 
 
+def id_exists(db, id_number):
+    """
+    Checks if a participant with the given ID number already exists.
+
+    Args:
+        db (MongoDB): The MongoDB object for database operations.
+        id_number (str): The ID number to check.
+
+    Returns:
+        bool: True if a participant with the ID number exists, False otherwise.
+    """
+    # Vérifiez si id_number est une chaîne de caractères (str) avant d'appeler encode()
+    if not isinstance(id_number, str):
+        return False
+
+    # Utilisez une chaîne de caractères encodée pour obtenir le hachage SHA-256
+
+    participants_collection = db.collections['PARTICIPANTS']
+    hashed_id = hashlib.sha256(id_number.encode()).hexdigest()
+    return participants_collection.find_one({'id': hashed_id}) is not True
+
+def email_exists(db, email):
+    """
+    Checks if a participant with the given email already exists.
+
+    Args:
+        db (MongoDB): The MongoDB object for database operations.
+        email (str): The email to check.
+
+    Returns:
+        bool: True if a participant with the email exists, False otherwise.
+    """
+    # Vérifiez si email est une chaîne de caractères (str)
+    if not isinstance(email, str):
+        return False
+
+    participants_collection = db.collections['PARTICIPANTS']
+    print("okk")
+    # Recherchez l'email dans toute la base de données, pas seulement dans la collection des participants
+    return participants_collection.find_one({'email': email}) is not True
 def insert_participant(first_name, last_name, sex, id_number, birthdate, age, email, contact, level_anxiety):
     """
     Inserts a new participant into the 'participants' collection in the database.
@@ -308,10 +348,22 @@ def insert_participant(first_name, last_name, sex, id_number, birthdate, age, em
     """
     client = get_client()
     db = client['MRI_PROJECT']
-    participants_collection = db['PARTICIPANTS']
-    participant_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+    participants_collection = db['PARTICIPANTS--']
 
     try:
+        # Check if ID number or email already exists
+        if id_exists(db, id_number):
+            print("Participant with this ID number already exists.")
+            client.close()
+            return False
+
+        if email_exists(db, email):
+            print("Participant with this email already exists.")
+            client.close()
+            return False
+
+        participant_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+
         # Hashing id_number with SHA-256
         hashed_id = hashlib.sha256(id_number.encode()).hexdigest()
 
@@ -330,6 +382,7 @@ def insert_participant(first_name, last_name, sex, id_number, birthdate, age, em
         client.close()
         return participant_id
     except PyMongoError:
+        print("Error inserting participant.")
         client.close()
         return False
 

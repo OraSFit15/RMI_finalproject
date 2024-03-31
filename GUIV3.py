@@ -12,6 +12,7 @@ import numpy as np
 import bcrypt
 import threading
 from database import MovementData
+from database import MongoDB
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -26,6 +27,7 @@ from PyQt5.QtMultimedia import QCamera, QCameraImageCapture, QCameraInfo, QAbstr
 from PyQt5.QtMultimediaWidgets import QCameraViewfinder
 from pymongo.errors import PyMongoError
 
+db = MongoDB('MRI_PROJECT',['USERS', 'PARTICIPANTS', 'MOVEMENT_DATA'])
 
 class CaptureThread(QThread):
     """A thread to capture frames from the default camera at 60 fps."""
@@ -119,7 +121,7 @@ class OpticalFlowApp(QWidget):
         self.parent_widget = parent_widget
         self.prev_gray = None
         self.viewfinder = QLabel(self)
-        self.viewfinder.setGeometry(20, 50, 640, 480)
+        self.viewfinder.setGeometry(600, 600, 200, 220)
         self.threshold = None
 
         self.capture_thread = CaptureThread()
@@ -161,8 +163,8 @@ class OpticalFlowApp(QWidget):
         h, w, ch = frame.shape
         bytes_per_line = ch * w
         # Calculate the appropriate QLabel size based on the video feed's aspect ratio
-        viewfinder_width = 600
-        viewfinder_height = 450
+        viewfinder_width = 200
+        viewfinder_height = 220
         self.parent_widget.viewfinder.setFixedSize(viewfinder_width, viewfinder_height)
         qimage = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qimage)
@@ -230,7 +232,7 @@ class FramelessWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.title_separator = QFrame(self.central_widget)
         self.title_separator.setGeometry(0, 30, self.width(), 2)
-        self.title_separator.setStyleSheet("background-color: orange;")
+        self.title_separator.setStyleSheet("background-color: #f8cba8;")
 
         self.setFixedSize(500, 300)
 
@@ -575,7 +577,7 @@ class MenuWindow(FramelessWindow):
         self.init_set_button()
         self.new_participant_dialog = NewParticipantDialog()
         self.existing_participant_dialog = ExistingParticipantDialog()
-
+        self.statistics = Statistic()
         self.show()
 
     def init_ui(self):
@@ -601,6 +603,8 @@ class MenuWindow(FramelessWindow):
     def show_exs_participant_dialog(self):
         self.existing_participant_dialog.show()
 
+    def show_statistics(self):
+        self.statistics.show()
     def init_new_button(self):
         """Initializes the Login button."""
         self.new = QPushButton(self.central_widget)
@@ -644,6 +648,7 @@ class MenuWindow(FramelessWindow):
             " background-color:  #fbe5d6; color: black;font-weight: bold;"
         )
         self.stat.setCursor(Qt.PointingHandCursor)
+        self.stat.clicked.connect(self.show_statistics)
         self.stat.clicked.connect(self.close_window)
         # self.stat.clicked.connect(self.login_clicked)
 
@@ -837,6 +842,8 @@ class ParticipantDetailsWindow(QDialog):
         self.submit_button_side = QPushButton("ADDITIONAL INFORMATION")
         self.submit_button_side.setCursor(Qt.PointingHandCursor)
         self.right_layout.addWidget(self.submit_button_side)
+        self.submit_button_side.clicked.connect(self.handle_additional_information_button_clicked)
+
 
         # Créer un layout horizontal pour la ligne des boutons
         self.button_layout_1 = QHBoxLayout()
@@ -849,7 +856,9 @@ class ParticipantDetailsWindow(QDialog):
 
         self.hist_mri = QPushButton("HISTORY\nOF\nMRI TEST")
         self.hist_mri.setCursor(Qt.PointingHandCursor)
+        self.hist_mri.clicked.connect(self.show_test_history)
         self.button_layout_1.addWidget(self.hist_mri)
+
         self.hist_mri.setFixedSize(150, 65)
 
         self.right_layout.addLayout(self.button_layout_1)
@@ -862,6 +871,7 @@ class ParticipantDetailsWindow(QDialog):
         self.test = QPushButton("BEGIN TEST")
         self.test.setCursor(Qt.PointingHandCursor)
         self.button_layout_2.addWidget(self.test)
+        self.test.clicked.connect(self.begin_test)
         self.test.setFixedSize(150, 65)
 
         self.right_layout.addLayout(self.button_layout_2)
@@ -922,6 +932,22 @@ class ParticipantDetailsWindow(QDialog):
         self.birthdate_field.setText(f" {participant_details['birthdate']}")
         self.gender_field.setText(f" {participant_details['sex']}")
 
+    def show_test_history(self, participant_id):
+        """Displays the test history window."""
+        if participant_id is not None:
+            movement_data_handler = MovementData(
+                db.collections['MOVEMENT_DATA'])
+            test_data = movement_data_handler.get_participant_data(participant_id)
+            if test_data:
+                self.test_history_window = TestHistoryWindow(test_data, db,
+                                                             participant_id)
+                self.test_history_window.show()
+            else:
+                QMessageBox.information(self, "Info", "The participant history is empty.")
+        else:
+            # Affiche un message d'erreur si aucun ID de participant n'est sélectionné
+            QMessageBox.critical(self, "Error", "No participant ID selected.")
+
     def handle_participant_id(self, participant_id):
         """Handles the participant ID received from the caller.
 
@@ -954,11 +980,20 @@ class ParticipantDetailsWindow(QDialog):
         self.moveWindow = None
 
     def closeEvent(self, event):
-
         menuWindow = MenuWindow()
         menuWindow.show()
 
+    def handle_additional_information_button_clicked(self):
+        """Handles the click event of the additional information button."""
+        button_clicked = self.sender()
+        if button_clicked == self.submit_button_side:
+            note_dialog = NoteDialog(note="")
+            note_dialog.exec_()
 
+    def begin_test(self):
+        """Starts the test """
+        begin_test = MainWindow()
+        begin_test.show()
 class NewParticipantDialog(QDialog):
     """A dialog for entering information about a new participant."""
     participant_id_generated = pyqtSignal(str)
@@ -979,17 +1014,24 @@ class NewParticipantDialog(QDialog):
 
         self.label_email = QLabel("Email:")
         self.email_field = QLineEdit()
+        email_validator = QRegularExpressionValidator(QRegularExpression(r'^[\w\.-]+@[\w\.-]+\.\w+$'))
+        self.email_field.setValidator(email_validator)
         self.label_level_anxiety = QLabel("Level of Anxiety:")
         self.level_anxiety_field = QLineEdit()
+        validator_level = QIntValidator(0, 90)
+        self.level_anxiety_field.setValidator(validator_level)
         self.contact_number_label = QLabel("Contact Number")
         self.contact_number_field = QLineEdit()
+        validator_nb = QIntValidator(0, 999999999)
+        self.contact_number_field.setValidator(validator_nb)
         self.submit_button_side = QPushButton("ADDITIONAL INFORMATION")
         self.submit_button_side.setCursor(Qt.PointingHandCursor)
-
         self.first_name_field = QLineEdit()
         self.last_name_field = QLineEdit()
         self.id_number_label = QLabel("Id Number:")
         self.id_number_field = QLineEdit()
+        validator_id = QIntValidator(0, 999999999)
+        self.id_number_field.setValidator(validator_id)
         self.sex_field = QComboBox()
         self.sex_field.addItems(['Male', 'Female', 'Other'])
         self.date_edit = QDateEdit()
@@ -1073,33 +1115,53 @@ class NewParticipantDialog(QDialog):
         """)
 
     def submit(self):
+        # Vérifiez si tous les champs requis sont remplis
         if self.first_name_field.text() == '' or self.last_name_field.text() == '':
             QMessageBox.warning(self, "Warning", "Please fill in all required fields.")
             return
 
+        # Obtenez la date de naissance sélectionnée et calculez l'âge
         selected_date = self.date_edit.date().toPyDate()
         selected_date_str = selected_date.strftime("%Y-%m-%d")
         self.selected_date_label.setText(selected_date_str)
-        print(selected_date_str)
-
         selected_date = datetime.datetime(selected_date.year, selected_date.month, selected_date.day)
         current_date = datetime.datetime.now()
         age = current_date.year - selected_date.year - (
-                (current_date.month, current_date.day) < (selected_date.month, selected_date.day))
+                    (current_date.month, current_date.day) < (selected_date.month, selected_date.day))
 
         if age < 0:
             QMessageBox.warning(self, "Warning", "Invalid date of birth.")
             return
 
+        id_number = self.id_number_field.text()
+        if not id_number.isdigit() or len(id_number) != 9:
+            QMessageBox.warning(self, "Warning", "Invalid ID number. Please enter a 9-digit number.")
+            return
+
+        level = self.level_anxiety_field.text()
+        if not level.isdigit() or len(level) not in (1, 2):
+            QMessageBox.warning(self, "Warning", "Level number please enter a number from 0 to 10")
+            return
+
+        phone_number = self.contact_number_field.text()
+        if not phone_number.isdigit() or len(phone_number) != 9:
+            QMessageBox.warning(self, "Warning", "Invalid phone number. Please enter a 10-digit number.")
+            return
+
+        if not self.email_field.hasAcceptableInput():
+            QMessageBox.warning(self, "Warning", "Invalid email address.")
+            return
+
+        # Si toutes les validations sont réussies, insérez les données dans la base de données
         success = database.insert_participant(
             self.first_name_field.text(),
             self.last_name_field.text(),
             self.sex_field.currentText(),
-            self.id_number_field.text(),
-            self.selected_date_label.text(),
+            id_number,
+            selected_date_str,
             age,
             self.email_field.text(),
-            self.contact_number_field.text(),
+            phone_number,
             self.level_anxiety_field.text(),
         )
 
@@ -1139,6 +1201,289 @@ class NewParticipantDialog(QDialog):
         if button_clicked == self.submit_button_side:
             note_dialog = NoteDialog(note="")
             note_dialog.exec_()
+
+class Statistic(QDialog):
+    """A window for displaying statistics."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Statistics")
+        self.setGeometry(450, 100, 550, 200)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.add_stat = AdditionalStat()
+        # Main layout
+        main_layout = QVBoxLayout()
+
+        # Title bar
+        title_bar = TitleBar(self, "STATISTICS")
+        main_layout.addWidget(title_bar)
+
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        separator.setStyleSheet("background-color: orange;")
+        main_layout.addWidget(separator)
+
+        # Fields layout
+        fields_layout = QGridLayout()
+
+        # Number of participants
+        num_participants_label = QLabel("Number of Participants:")
+        num_participants_field = QLineEdit()
+        fields_layout.addWidget(num_participants_label, 0, 0)
+        fields_layout.addWidget(num_participants_field, 0, 1)
+
+        # Gender distribution
+        gender_label = QLabel("Gender Distribution:")
+        female_field = QLineEdit()
+        female_field.setPlaceholderText("Female")
+        male_field = QLineEdit()
+        male_field.setPlaceholderText("Male")
+        other_field = QLineEdit()
+        other_field.setPlaceholderText("Other")
+        fields_layout.addWidget(gender_label, 1, 0)
+        fields_layout.addWidget(female_field, 1, 1)
+        fields_layout.addWidget(male_field, 1, 2)
+        fields_layout.addWidget(other_field, 1, 3)
+
+        # Average age
+        average_age_label = QLabel("Average Age:")
+        average_age_field = QLineEdit()
+        average_from_label = QLabel("From:")
+        average_age_from_field = QLineEdit()
+        average_to_label = QLabel("To:")
+        average_age_to_field = QLineEdit()
+
+        fields_layout.addWidget(average_age_label, 2, 0)
+        fields_layout.addWidget(average_age_field, 2, 1)
+        fields_layout.addWidget(average_from_label, 2, 2)
+        fields_layout.addWidget(average_age_from_field, 2, 3)
+        fields_layout.addWidget(average_to_label, 2, 4)
+        fields_layout.addWidget(average_age_to_field, 2, 5)
+
+        average_time_label = QLabel("Average Time:")
+        average_time_field = QLineEdit()
+        max_time_label = QLabel("Max Time:")
+        max_time_field = QLineEdit()
+        min_time_label = QLabel("Min Time:")
+        min_time_field = QLineEdit()
+        fields_layout.addWidget(average_time_label, 3, 0)
+        fields_layout.addWidget(average_time_field, 3, 1)
+        fields_layout.addWidget(max_time_label, 3, 2)
+        fields_layout.addWidget(max_time_field, 3, 3)
+        fields_layout.addWidget(min_time_label, 3, 4)
+        fields_layout.addWidget(min_time_field, 3, 5)
+
+        # Add fields layout to main layout
+        main_layout.addLayout(fields_layout)
+
+        # Additional Stat button
+        additional_stat_button = QPushButton("ADDITIONAL STATISTICS")
+        additional_stat_button.setCursor(Qt.PointingHandCursor)
+        additional_stat_button.clicked.connect(self.show_addstat)
+        main_layout.addWidget(additional_stat_button)
+
+        # Set main layout for dialog
+        self.setLayout(main_layout)
+
+        # Stylesheet
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f8cba8;
+            }
+            QLabel {
+                color: black;
+                font-weight: bold;
+                background-color: #f8cba8;
+            }
+            QLineEdit {
+                background-color: #fbe5d6;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 3px;
+            }
+            QPushButton {
+                background-color: #f4b283;
+                color: black;
+                font-weight: bold;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 6px;
+            }
+            QPushButton:pressed {
+                background-color: #8c3e13;
+            }
+        """)
+
+    def mousePressEvent(self, event):
+        """Event handler for mouse press events."""
+        self.mousePress = event.pos()
+
+    def mouseMoveEvent(self, event):
+        """Event handler for mouse move events."""
+        if self.mousePress is None:
+            return
+        self.moveWindow = event.globalPos() - self.mousePress
+        self.move(self.moveWindow)
+
+    def mouseReleaseEvent(self, event):
+        """Event handler for mouse release events."""
+        self.mousePress = None
+        self.moveWindow = None
+    def show_addstat(self):
+        """Show add statistics."""
+        self.close()
+        self.add_stat.show()
+
+
+class AdditionalStat(QDialog):
+    """A window for displaying additional statistics."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Additional Statistics")
+        self.setGeometry(450, 100, 550, 200)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+
+        # Main layout
+        main_layout = QVBoxLayout()
+
+        # Title bar
+        title_bar = TitleBar(self, "ADDITIONAL STATISTICS")
+        main_layout.addWidget(title_bar)
+
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        separator.setStyleSheet("background-color: orange;")
+        main_layout.addWidget(separator)
+
+        # Fields layout
+        fields_layout = QGridLayout()
+
+        # Number of participants
+        num_participants_label = QLabel("Number of Participants:")
+        num_participants_field = QLineEdit()
+        fields_layout.addWidget(num_participants_label, 0, 0)
+        fields_layout.addWidget(num_participants_field, 0, 1)
+
+        # Gender distribution
+        gender_label = QLabel("Gender Distribution:")
+        female_field = QLineEdit()
+        female_field.setPlaceholderText("Female")
+        male_field = QLineEdit()
+        male_field.setPlaceholderText("Male")
+        other_field = QLineEdit()
+        other_field.setPlaceholderText("Other")
+        fields_layout.addWidget(gender_label, 1, 0)
+        fields_layout.addWidget(female_field, 1, 1)
+        fields_layout.addWidget(male_field, 1, 2)
+        fields_layout.addWidget(other_field, 1, 3)
+
+        # Average age
+        average_age_label = QLabel("Average Age:")
+        average_age_field = QLineEdit()
+        average_from_label = QLabel("From:")
+        average_age_from_field = QLineEdit()
+        average_to_label = QLabel("To:")
+        average_age_to_field = QLineEdit()
+
+        fields_layout.addWidget(average_age_label, 2, 0)
+        fields_layout.addWidget(average_age_field, 2, 1)
+        fields_layout.addWidget(average_from_label, 2, 2)
+        fields_layout.addWidget(average_age_from_field, 2, 3)
+        fields_layout.addWidget(average_to_label, 2, 4)
+        fields_layout.addWidget(average_age_to_field, 2, 5)
+
+        # Average time
+        average_time_label = QLabel("Average Time:")
+        average_time_field = QLineEdit()
+        max_time_label = QLabel("Max Time:")
+        max_time_field = QLineEdit()
+        min_time_label = QLabel("Min Time:")
+        min_time_field = QLineEdit()
+        fields_layout.addWidget(average_time_label, 3, 0)
+        fields_layout.addWidget(average_time_field, 3, 1)
+        fields_layout.addWidget(max_time_label, 3, 2)
+        fields_layout.addWidget(max_time_field, 3, 3)
+        fields_layout.addWidget(min_time_label, 3, 4)
+        fields_layout.addWidget(min_time_field, 3, 5)
+
+        # Add fields layout to main layout
+        main_layout.addLayout(fields_layout)
+
+        # Additional Stat button
+
+
+        # Additional buttons
+        button_layout = QHBoxLayout()
+
+        button1 = QPushButton("SHOW GRAPHICALLY")
+        button1.setCursor(Qt.PointingHandCursor)
+
+        button2 = QPushButton("SAVE AS PDF")
+        button2.setCursor(Qt.PointingHandCursor)
+
+        button3 = QPushButton("SAVE TO EXCEL")
+        button3.setCursor(Qt.PointingHandCursor)
+
+
+        button_layout.addWidget(button1)
+        button_layout.addWidget(button2)
+        button_layout.addWidget(button3)
+
+        main_layout.addLayout(button_layout)
+
+        # Set main layout for dialog
+        self.setLayout(main_layout)
+
+        # Stylesheet
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f8cba8;
+            }
+            QLabel {
+                color: black;
+                font-weight: bold;
+                background-color: #f8cba8;
+            }
+            QLineEdit {
+                background-color: #fbe5d6;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 3px;
+            }
+            QPushButton {
+                background-color: #f4b283;
+                color: black;
+                font-weight: bold;
+                border: 1px solid #c55b26;
+                border-radius: 5px;
+                padding: 6px;
+            }
+            QPushButton:pressed {
+                background-color: #8c3e13;
+            }
+        """)
+
+    def mousePressEvent(self, event):
+        """Event handler for mouse press events."""
+        self.mousePress = event.pos()
+
+    def mouseMoveEvent(self, event):
+        """Event handler for mouse move events."""
+        if self.mousePress is None:
+            return
+        self.moveWindow = event.globalPos() - self.mousePress
+        self.move(self.moveWindow)
+
+    def mouseReleaseEvent(self, event):
+        """Event handler for mouse release events."""
+        self.mousePress = None
+        self.moveWindow = None
+
 
 class ExistingParticipantDialog(QDialog):
     """A dialog for selecting an existing participant."""
@@ -1392,7 +1737,7 @@ class TestHistoryWindow(QDialog):
             # Créez et configurez le widget de tableau
             self.table = QTableWidget()
             self.table.setColumnCount(6)
-            self.table.setHorizontalHeaderLabels(['Test #', 'Date', 'Movement #', 'Test', 'MRI', 'Note'])
+            self.table.setHorizontalHeaderLabels(['NUMBER', 'DATE', 'DURATION', 'ACCURACY', 'VOLUME', 'SUCCESS'])
             self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             self.main_layout.addWidget(self.table)
 
@@ -1472,6 +1817,11 @@ class TestHistoryWindow(QDialog):
         self.mousePress = None
         self.moveWindow = None
 
+    def closeEvent(self, event):
+        self.close()
+        if isinstance(self.participant_id, str):
+            detailsWindow = ParticipantDetailsWindow(self.participant_id)
+            detailsWindow.show()
 
 class MainWindow(FramelessWindow):
     """
@@ -1505,12 +1855,15 @@ class MainWindow(FramelessWindow):
         toggle_sound: Toggles the sound playback.
         adjust_volume: Adjusts the sound volume.
         toggle_microphone: Toggles the microphone recording.
+        get_current_date: Get the current date.
+        get_current_time: Get the current time.
+        update_time: Update the time label.
         closeEvent: Overrides the close event of the main window.
     """
 
     def __init__(self):
         """Initializes the MainWindow class."""
-        super().__init__(title="Mock MRI Scanner")
+        super().__init__(title="Examination of the MRI Simulator")  # Modifier le titre de la fenêtre
         self.init_ui()
         self.client = database.get_client()
         db = self.client['MRI_PROJECT']
@@ -1521,18 +1874,14 @@ class MainWindow(FramelessWindow):
         self.movement_count = 0
         pygame.mixer.init()
         self.sound_loader = SoundLoader("mrisound.mp3")
-        self.sound_loader.sound_loaded.connect(self.on_sound_loaded)
+        self.sound_channel = None
+        self.sound_loader.sound_loaded.connect(self.toggle_sound)
         self.sound_loader.start()
         self.sound_channel = None
         self.participant_details_window = None
         self.participant_id = None
         self.threshold = None
         self.microphone = MicrophoneRecorder()
-
-    def on_sound_loaded(self):
-        """Callback method when the sound is loaded."""
-        self.sound_checkbox.setEnabled(True)  # Enable the sound checkbox
-        self.sound_checkbox.setToolTip("Toggle sound")  # Reset the tooltip
 
     def init_ui(self):
         """Initializes the user interface of the main window."""
@@ -1544,16 +1893,16 @@ class MainWindow(FramelessWindow):
 
         main_layout = self.layout
         main_layout.setContentsMargins(10, 0, 10, 10)
-        self.optical_flow_app = OpticalFlowApp(self, self)
-        main_layout.addWidget(self.optical_flow_app)
         self.viewfinder = QLabel(self)
-        self.viewfinder.setStyleSheet("background-color: #2c2f33;")
         self.viewfinder.setFrameShape(QFrame.StyledPanel)
         self.viewfinder.setFrameShadow(QFrame.Raised)
         self.viewfinder.setScaledContents(True)
         self.viewfinder.setAlignment(Qt.AlignCenter)
         self.viewfinder.lower()
         main_layout.addWidget(self.viewfinder)
+
+        self.optical_flow_app = OpticalFlowApp(self, self)
+        main_layout.addWidget(self.optical_flow_app)
 
         # Create other widgets and components
         self.create_controls()
@@ -1562,38 +1911,89 @@ class MainWindow(FramelessWindow):
         controls_layout = QGridLayout()
         controls_layout.setSpacing(2)
         controls_layout.setHorizontalSpacing(10)
-        controls_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addLayout(controls_layout)
 
         # Position controls as required
         self.position_controls(controls_layout)
         self.connect_signals()
+        self.date_label = QLabel(self)
+        self.date_label.setText(self.get_current_date())
+        self.time_label = QLabel(self)
+        self.time_label.setText(self.get_current_time())
 
+        # Layout and styling (optional)
+        date_time_layout = QHBoxLayout()
+        date_time_layout.addWidget(self.date_label)
+        date_time_layout.addWidget(self.time_label)
+        date_time_layout.addStretch()  # Add stretch to move labels to the right
+        main_layout.addLayout(date_time_layout)
+
+        # Align the date and time labels to the bottom-right corner
+        main_layout.addStretch()
+
+        # Update time every second (optional)
+        timer = QTimer(self)
+        timer.setInterval(1000)  # 1 second
+        timer.timeout.connect(self.update_time)
+        timer.start()
         self.show()
+
+        self.setStyleSheet("""
+                   background-color: #f8cba8;
+                   QDialog {
+                       background-color: #f8cba8;
+                   }
+                   QLabel {
+                       color: black;
+                       font-weight: bold;
+                       background-color: #f8cba8;
+                   }
+                   QLineEdit, QComboBox, QDateEdit {
+                       background-color: #fbe5d6;
+                       border: 1px solid #c55b26;
+                       border-radius: 5px;
+                       padding: 3px;
+                   }
+                   QPushButton {
+                       background-color: #f4b283;
+                       color: black;
+                       font-weight: bold;
+                       border: 1px solid #c55b26;
+                       border-radius: 5px;
+                       padding: 6px;
+                   }
+                   QPushButton:pressed {
+                       background-color: #8c3e13;
+                   }
+               """)
 
     def create_controls(self):
         """Creates the buttons and other controls."""
-        self.participant_details_button = self.create_button("participant Details")
-        self.start_test_button = self.create_button("Start Test")
-        self.stop_test_button = self.create_button("Stop Test")
-        self.test_history_button = self.create_button("Test History")
-        self.display_results_button = self.create_button("Display Results")
-        self.sound_checkbox = QCheckBox()
-        self.sound_label = QLabel("Sound🔊")
+        self.start_test_button = self.create_button("START")
+        self.stop_test_button = self.create_button("STOP")
+
+        self.start_test_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.stop_test_button.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
+        button_width = 100  # Set your desired width
+        button_height = 30  # Set your desired height
+
+        self.start_test_button.setFixedSize(button_width, button_height)
+        self.stop_test_button.setFixedSize(button_width, button_height)
+        self.start_test_button.setCursor(Qt.PointingHandCursor)
+        self.stop_test_button.setCursor(Qt.PointingHandCursor)
+
         self.volume_slider = QSlider(Qt.Horizontal)
-        self.volume_label_text = QLabel("Volume")
-        self.volume_label_value = QLabel("50%")
+        self.volume_label_text = QLabel("VOLUME")
+        self.volume_label_value = QLabel("50")
         self.toggle_microphone_checkbox = QCheckBox()
-        self.toggle_microphone_label = QLabel("Toggle Microphone🎙️")
+        self.toggle_microphone_label = QLabel("MICROPHONE 🎙️")
         self.sensitivity_menu = QComboBox()
         self.sensitivity_label = QLabel("Movement Sensitivity:")
         self.movement_detected_result_label = QLabel("No")
         self.movement_value_label = QLabel("Movement Value:")
         self.movement_detected_label = QLabel("Movement Detected:")
         self.movement_details_label = QLabel("Movement Details")
-        self.participant_id_label = QLabel("participant ID: N/A")
-        self.sound_simulation_label = QLabel("Sound Simulation")
-        self.participant_id_label.setFont(QFont('Roboto', 12, QFont.Bold, italic=True))
         self.spacerline = QFrame()
         self.spacerline.setFrameShape(QFrame.HLine)
         self.spacerline.setFrameShadow(QFrame.Sunken)
@@ -1601,110 +2001,118 @@ class MainWindow(FramelessWindow):
         self.spacerline.setStyleSheet("color: #2c2f33;")
         self.empty_label = QLabel()
         self.empty_field = QLabel()
-        self.sound_checkbox.setEnabled(False)
-        self.sound_checkbox.setToolTip("Loading sound, please wait...")
-        self.participant_details_button.setIcon(QIcon("human-icon-png-1904.png"))
-        self.start_test_button.setIcon(QIcon("play.png"))
-        self.stop_test_button.setIcon(QIcon("Pause.png"))
-        self.test_history_button.setIcon(QIcon("fd.png"))
-        self.display_results_button.setIcon(QIcon("fs.png"))
-        self.display_results_button.setStyleSheet("font-size: 11px;")
         self.movement_details_label.setFont(QFont('Roboto', 12, QFont.Bold, italic=True))
         self.movement_details_label.setStyleSheet("font-size: 12px; text-decoration: underline;")
-        self.sound_simulation_label.setFont(QFont('Roboto', 12, QFont.Bold, italic=True))
-        self.sound_simulation_label.setStyleSheet("font-size: 12px; text-decoration: underline;")
-        self.volume_slider.setFixedWidth(150)
-        self.volume_slider.setFixedHeight(10)
-        self.volume_slider.setRange(0, 100)
-        self.volume_slider.setValue(50)
+        self.volume_slider.setMinimum(0)
+        self.volume_slider.setMaximum(100)
+        self.volume_slider.setValue(0)
+        self.volume_slider.setTickInterval(5)
+        self.volume_slider.setTickPosition(QSlider.TicksBelow)
+        self.threshold_label = QLabel("ALLOWABLE DEVIATION")
+        self.threshold_slider = QSlider(Qt.Horizontal)
+        self.threshold_slider.setMinimum(0)
+        self.threshold_slider.setMaximum(3)
+        self.threshold_slider.setTickInterval(1)
+        self.threshold_slider.setTickPosition(QSlider.TicksBelow)
+
+        self.volume_slider.setStyleSheet(
+            """
+            color: white;
+            font-weight: bold;
+
+            QSlider::groove:horizontal {
+                border: none;  /* Remove border for a seamless look */
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                            stop:0 #e0e0e0, stop:1 #cccccc);
+                height: 8px;
+                border-radius: 4px;
+            }
+
+            QSlider::handle:horizontal {
+                background: #f0f0f0;  /* Lighter handle background */
+                border: 1px solid #cccccc;
+                width: 13px;  /* Adjust width for a slimmer handle */
+                margin: 2px 0;  /* Adjust for vertical centering */
+            }
+
+            /* Optional: Add a subtle shadow effect to the handle */
+            QSlider::handle:horizontal {
+                qproperty-shadow: 0 1px 1px #aaaaaa;
+            }
+             QLabel {
+                       color: black;
+                       font-weight: bold;
+                       background-color: #f8cba8;
+                   }
+            """
+        )
 
     def create_button(self, text):
         """Creates a QPushButton with the specified text."""
         button = QPushButton(text, self)
-        button.setFont(QFont('Roboto', 12))
-        button.setStyleSheet("font-size: 12px;")
+        button.setStyleSheet("""background-color: #f4b283;
+                       color: black;
+                       font-weight: bold;
+                       border: 1px solid #c55b26;
+                       border-radius: 5px;
+                       padding: 6px;""")
         button.setFixedWidth(150)
         return button
 
     def position_controls(self, layout):
         """Positions the controls in the layout."""
-        # Create a QVBoxLayout to stack the buttons vertically
-        buttons_layout = QVBoxLayout()
-
-        buttons_layout.addWidget(self.participant_details_button)
-        buttons_layout.addWidget(self.start_test_button)
-        buttons_layout.addWidget(self.stop_test_button)
-        buttons_layout.addWidget(self.test_history_button)
-        buttons_layout.addWidget(self.display_results_button)
-
-        movement_layout = QFormLayout()
-        movement_layout.setVerticalSpacing(3)
-        movement_layout.setHorizontalSpacing(5)
-        movement_layout.addRow(self.participant_id_label)
-        movement_layout.addRow(self.spacerline)
-        movement_layout.addRow(self.movement_details_label)
-        movement_layout.addRow(self.movement_detected_label, self.movement_detected_result_label)
-        movement_layout.addRow(self.movement_value_label)
-        movement_layout.addRow(self.spacerline)
+        # Create a QVBoxLayout to stack the buttons vertically on the left side
 
         # Adjust the sound layout
         sound_layout = QVBoxLayout()
         sound_layout.setSpacing(0)
         sound_layout.setContentsMargins(0, 0, 0, 0)
-        sound_label_layout = QHBoxLayout()
-        sound_label_layout.setSpacing(2)
-        sound_label_layout.setContentsMargins(0, 0, 0, 0)
-        self.sound_label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-        self.sound_checkbox.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
 
-        sound_label_layout.addWidget(self.sound_label)
-        sound_label_layout.addWidget(self.sound_checkbox)
+        # Sound Label and Slider Layout
+        sound_slider_layout = QVBoxLayout()
+        sound_slider_layout.addWidget(self.volume_label_value)
+        sound_slider_layout.addWidget(self.volume_slider)
 
-        slider_layout = QHBoxLayout()
-        slider_layout.setSpacing(2)
-        slider_layout.setContentsMargins(0, 0, 0, 0)
-        self.volume_label_text.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-        self.volume_slider.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-        self.volume_label_value.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-        slider_layout.addWidget(self.volume_label_text)
-        slider_layout.addWidget(self.volume_slider)
-        slider_layout.addWidget(self.volume_label_value)
-
-        microphone_layout = QHBoxLayout()
-        microphone_layout.setSpacing(2)
-        microphone_layout.setContentsMargins(0, 0, 0, 0)
-        self.toggle_microphone_label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-        self.toggle_microphone_checkbox.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        # Microphone Label and Checkbox Layout
+        microphone_layout = QVBoxLayout()
         microphone_layout.addWidget(self.toggle_microphone_label)
         microphone_layout.addWidget(self.toggle_microphone_checkbox)
 
-        sound_layout.addWidget(self.empty_label)
-        sound_layout.addWidget(self.sound_simulation_label)
-        sound_layout.addLayout(sound_label_layout)
-        sound_layout.addLayout(slider_layout)
+        # Threshold Label and Slider Layout
+        threshold_layout = QVBoxLayout()
+        threshold_layout.addWidget(self.threshold_label)
+        threshold_layout.addWidget(self.threshold_slider)
+
+        # Add each group (label-slider) to sound layout
+        sound_layout.addWidget(self.volume_label_text)
+        sound_layout.addLayout(sound_slider_layout)
         sound_layout.addLayout(microphone_layout)
 
-        layout.addLayout(buttons_layout, 0, 0, 5, 1)
-        layout.addLayout(movement_layout, 0, 1, 6, 2)
-        layout.addLayout(sound_layout, 2, 1, 3, 1)
-        layout.setHorizontalSpacing(10)
+        sound_layout.addLayout(threshold_layout)  # Add threshold layout
+
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addWidget(self.start_test_button)
+        buttons_layout.addWidget(self.stop_test_button)
+        buttons_layout.addStretch()
+
+        buttons_layout.setSpacing(10)
+        layout.setColumnStretch(0, 1)
+        # Create a layout for the video widget on the right side
+        video_layout = QVBoxLayout()
+        video_layout.addWidget(self.viewfinder)  # Add viewfinder to the video layout
+        video_layout.addStretch()  # Add stretch to align viewfinder to the top
+
+        # Add controls to the layout
+        layout.addLayout(buttons_layout, 1, 0)  # Buttons on the left
+        layout.addLayout(sound_layout, 0, 0)  # Sound controls on the left
+        layout.addLayout(video_layout, 0, 1, 2, 1)  # Video widget on the right
 
     def connect_signals(self):
         """Connects the signals to their respective slot methods."""
-        self.participant_details_button.clicked.connect(self.show_participant_details)
         self.start_test_button.clicked.connect(self.start_test)
         self.stop_test_button.clicked.connect(self.stop_test)
-        self.test_history_button.clicked.connect(self.show_test_history)
-        self.display_results_button.clicked.connect(self.display_results)
-        self.sound_checkbox.stateChanged.connect(self.toggle_sound)
         self.volume_slider.valueChanged.connect(self.adjust_volume)
         self.toggle_microphone_checkbox.stateChanged.connect(self.toggle_microphone)
-
-    def show_participant_details(self):
-        """Displays the participant details window."""
-        self.participant_details_window = ParticipantDetailsWindow()
-        self.participant_details_window.participant_id_received.connect(self.handle_participant_id)
-        self.participant_details_window.show()
 
     def handle_participant_id(self, participant_id):
         """Handles the received participant ID."""
@@ -1717,7 +2125,7 @@ class MainWindow(FramelessWindow):
         if self.participant_id is not None:
             self.collect_movement_data = True
             self.movement_count = 0
-            self.threshold = None
+            self.threshold = self.threshold_slider.value()  # Update threshold value
             print("Started collecting movement data")
         else:
             QMessageBox.critical(self, "Error", "No participant ID selected.")
@@ -1733,19 +2141,6 @@ class MainWindow(FramelessWindow):
 
             self.db.save_test_data(self.current_test_data, self.participant_id)
 
-    def show_test_history(self):
-        """Displays the test history window."""
-        self.participant_id = "1234"
-        if self.participant_id is not None:
-            test_data = self.db.get_participant_data(self.participant_id)
-            if test_data:  # check if test_data is not empty
-                self.test_history_window = TestHistoryWindow(test_data, self.db, self.participant_id)
-                self.test_history_window.show()
-            else:  # if test_data is empty, show a message box
-                QMessageBox.information(self, "Info", "The participant history is empty.")
-        else:
-            QMessageBox.critical(self, "Error", "No participant ID selected.")
-
     def show_microphone_error_message(self, message):
         """Shows an error message related to the microphone."""
         msg = QMessageBox()
@@ -1755,15 +2150,9 @@ class MainWindow(FramelessWindow):
         msg.setWindowTitle("Error")
         msg.exec_()
 
-    def display_results(self):
-        """Displays the test results."""
-        if self.participant_id is not None and self.movement_count is not None:
-            QMessageBox.information(self, "Test Results",  f"The participant moved {self.movement_count} times during the simulation")
-        else:
-            QMessageBox.critical(self, "Error", "No test data available.")
-
-    def toggle_sound(self, state):
-        """Toggles the sound playback."""
+    def toggle_sound(self):
+        """Active ou désactive la lecture du son."""
+        state = True  # Mettez ici l'état que vous voulez
         if state:
             if self.sound_channel is None and self.sound_loader.sound:
                 self.sound_channel = pygame.mixer.find_channel()
@@ -1779,7 +2168,7 @@ class MainWindow(FramelessWindow):
         """Adjusts the sound volume."""
         if self.sound_channel:
             self.sound_channel.set_volume(value / 100)
-        self.volume_label_value.setText(f"{value}%")
+        self.volume_label_value.setText(f"{value}")
 
     def toggle_microphone(self, state):
         """Toggles the microphone recording."""
@@ -1790,6 +2179,17 @@ class MainWindow(FramelessWindow):
                 self.microphone.stop()
         else:
             self.show_error_message("No Microphone detected, please connect one and click again.")
+
+    def get_current_date(self):
+        today = datetime.date.today()
+        return today.strftime("%B %d, %Y")  # Format the date (e.g., March 30, 2024)
+
+    def get_current_time(self):
+        now = datetime.datetime.now()
+        return now.strftime("%H:%M:%S")  # Format the time (e.g., 23:21:00)
+
+    def update_time(self):
+        self.time_label.setText(self.get_current_time())
 
     def closeEvent(self, event):
         """Overrides the close event of the main window."""
